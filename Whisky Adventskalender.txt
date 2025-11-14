@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Whisky Adventskalender</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: #0f172a;
+      color: #e5e7eb;
+      display: flex;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .app {
+      background: #020617;
+      border-radius: 16px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6);
+      max-width: 1100px;
+      width: 100%;
+      padding: 20px 24px 28px;
+      box-sizing: border-box;
+      border: 1px solid #1e293b;
+      position: relative;
+      z-index: 1;
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 1.7rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h1 span.logo-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #f97316, #facc15);
+      box-shadow: 0 0 12px rgba(249, 115, 22, 0.8);
+    }
+
+    h2 {
+      margin-top: 0;
+      font-size: 1.3rem;
+    }
+
+    .subtitle {
+      color: #9ca3af;
+      margin-bottom: 18px;
+      font-size: 0.95rem;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      border: 1px solid #1f2937;
+      background: #020617;
+      color: #e5e7eb;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    }
+
+    .tab-btn span.badge {
+      font-size: 0.7rem;
+      background: rgba(148, 163, 184, 0.18);
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, #f97316, #facc15);
+      border-color: transparent;
+      color: #020617;
+      font-weight: 600;
+    }
+
+    .tab-btn:hover:not(.active) {
+      background: #020617;
+      border-color: #374151;
+      transform: translateY(-1px);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .section {
+      display: none;
+      border-radius: 14px;
+      background: radial-gradient(circle at top left, rgba(249, 115, 22, 0.18), transparent 55%),
+                  radial-gradient(circle at bottom right, rgba(56, 189, 248, 0.16), transparent 55%),
+                  #020617;
+      border: 1px solid #1f2937;
+      padding: 16px 16px 18px;
+      margin-bottom: 4px;
+    }
+
+    .section.active {
+      display: block;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: #9ca3af;
+      margin-bottom: 4px;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    select,
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 7px 9px;
+      border-radius: 8px;
+      border: 1px solid #374151;
+      background: #020617;
+      color: #e5e7eb;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus,
+    select:focus,
+    textarea:focus {
+      border-color: #f97316;
+      box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.35);
+      background: #020617;
+    }
+
+    textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .btn {
+      border-radius: 999px;
+      padding: 8px 16px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+      transition: transform 0.1s, box-shadow 0.1s, background 0.15s, opacity 0.15s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #f97316, #facc15);
+      color: #020617;
+      box-shadow: 0 10px 25px rgba(248, 181, 0, 0.35);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: #e5e7eb;
+      border: 1px solid #4b5563;
+    }
+
+    .btn-small {
+      padding: 4px 10px;
+      font-size: 0.8rem;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: default;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .hint {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+
+    .card {
+      border-radius: 12px;
+      border: 1px solid #1f2937;
+      background: rgba(15, 23, 42, 0.85);
+      padding: 10px 12px;
+      margin-bottom: 10px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .pill {
+      border-radius: 999px;
+      padding: 2px 10px;
+      background: rgba(148, 163, 184, 0.18);
+      font-size: 0.75rem;
+      color: #e5e7eb;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 0.85rem;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid #1f2937;
+      padding: 6px 6px;
+      text-align: left;
+    }
+
+    th {
+      color: #9ca3af;
+      font-weight: 500;
+      background: rgba(15, 23, 42, 0.7);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    tr:nth-child(even) td {
+      background: rgba(15, 23, 42, 0.5);
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 0.7rem;
+    }
+
+    .tag-success {
+      background: rgba(22, 163, 74, 0.18);
+      color: #bbf7d0;
+    }
+
+    .tag-error {
+      background: rgba(239, 68, 68, 0.18);
+      color: #fecaca;
+    }
+
+    .flex {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .flex-grow {
+      flex: 1 1 auto;
+    }
+
+    .score-summary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid #1f2937;
+      font-size: 0.85rem;
+    }
+
+    .score-summary strong {
+      color: #fbbf24;
+    }
+
+    .toast {
+      margin-top: 8px;
+      font-size: 0.85rem;
+    }
+
+    .toast-success {
+      color: #bbf7d0;
+    }
+
+    .toast-info {
+      color: #bfdbfe;
+    }
+
+    .toast-error {
+      color: #fecaca;
+    }
+
+    .scroll-container {
+      max-height: 340px;
+      overflow: auto;
+      border-radius: 10px;
+      border: 1px solid #1f2937;
+      background: rgba(15, 23, 42, 0.75);
+      margin-top: 8px;
+    }
+
+    /* Login-Overlay */
+    #loginOverlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at top, rgba(15, 23, 42, 0.9), #020617);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    #loginCard {
+      width: 100%;
+      max-width: 420px;
+      background: #020617;
+      border-radius: 18px;
+      border: 1px solid #1f2937;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7);
+      padding: 20px 18px 18px;
+    }
+
+    #loginCard h2 {
+      margin-top: 0;
+      margin-bottom: 6px;
+    }
+
+    .login-section-title {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #9ca3af;
+      margin-top: 8px;
+      margin-bottom: 4px;
+    }
+
+    .login-player-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .login-player-btn {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .login-footer {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      margin-top: 8px;
+    }
+
+    #currentRoleBadge {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid #1f2937;
+    }
+
+    #currentRoleName {
+      font-weight: 500;
+    }
+
+    @media (max-width: 700px) {
+      .app {
+        padding: 14px 12px 20px;
+      }
+      h1 {
+        font-size: 1.4rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Login-Overlay -->
+  <div id="loginOverlay">
+    <div id="loginCard">
+      <h2>Anmeldung</h2>
+      <div class="subtitle" style="margin-bottom: 10px;">
+        Bitte waehle, ob du als Administrator oder als eine der drei Personen arbeiten willst.
+      </div>
+
+      <div class="login-section">
+        <div class="login-section-title">Administrator</div>
+
+        <!-- Admin: erster Login (Code setzen) -->
+        <div id="adminFirstLogin">
+          <label for="adminNewPinInput">Neuer Admin-Code</label>
+          <input type="password" id="adminNewPinInput" placeholder="mindestens 4 Zeichen" />
+          <label for="adminNewPinConfirmInput" style="margin-top:6px;">Code bestaetigen</label>
+          <input type="password" id="adminNewPinConfirmInput" placeholder="noch einmal eingeben" />
+          <button id="adminSetPinBtn" class="btn btn-primary" style="margin-top: 8px;">
+            Admin-Code setzen und anmelden
+          </button>
+        </div>
+
+        <!-- Admin: bestehender Code -->
+        <div id="adminLoginExisting" class="hidden">
+          <label for="adminPinInput">Admin-Code</label>
+          <input type="password" id="adminPinInput" placeholder="Admin-Code eingeben" />
+          <button id="adminLoginBtn" class="btn btn-primary" style="margin-top: 8px;">
+            Als Admin anmelden
+          </button>
+        </div>
+
+        <div id="adminLoginToast" class="toast toast-error" style="display:none;"></div>
+      </div>
+
+      <div class="login-section" style="margin-top: 14px;">
+        <div class="login-section-title">Teilnehmer</div>
+        <div class="login-player-buttons">
+          <button class="btn btn-outline login-player-btn" data-player-index="0">
+            <span id="loginPlayerName1">Person 1</span>
+          </button>
+          <button class="btn btn-outline login-player-btn" data-player-index="1">
+            <span id="loginPlayerName2">Person 2</span>
+          </button>
+          <button class="btn btn-outline login-player-btn" data-player-index="2">
+            <span id="loginPlayerName3">Person 3</span>
+          </button>
+        </div>
+
+        <div id="playerLoginDetail" style="margin-top:10px; display:none;">
+          <div class="login-section-title" id="playerLoginTitle">Login fuer Teilnehmer</div>
+
+          <!-- Spieler: erster Login (Code setzen) -->
+          <div id="playerFirstLogin">
+            <label for="playerNewPinInput">Neuer Code</label>
+            <input type="password" id="playerNewPinInput" placeholder="mindestens 4 Zeichen" />
+            <label for="playerNewPinConfirmInput" style="margin-top:6px;">Code bestaetigen</label>
+            <input type="password" id="playerNewPinConfirmInput" placeholder="noch einmal eingeben" />
+            <button id="playerSetPinBtn" class="btn btn-primary" style="margin-top: 8px;">
+              Code setzen und anmelden
+            </button>
+          </div>
+
+          <!-- Spieler: bestehender Code -->
+          <div id="playerLoginExisting" class="hidden">
+            <label for="playerPinInput">Code</label>
+            <input type="password" id="playerPinInput" placeholder="Code eingeben" />
+            <button id="playerLoginBtn" class="btn btn-primary" style="margin-top: 8px;">
+              Anmelden
+            </button>
+          </div>
+
+          <div id="playerLoginToast" class="toast toast-error" style="display:none;"></div>
+        </div>
+      </div>
+
+      <div class="login-footer">
+        Hinweis: Admin kann Namen, Whisky-Liste, Loesungen und Auswertung sehen. Teilnehmer koennen nur ihre eigenen
+        Tipps eingeben.
+      </div>
+    </div>
+  </div>
+
+  <div class="app">
+    <div id="currentRoleBadge" class="hidden">
+      Angemeldet als: <span id="currentRoleName"></span>
+      <button id="logoutBtn" class="btn btn-outline btn-small">Rolle wechseln</button>
+    </div>
+
+    <h1>
+      Whisky Adventskalender
+      <span class="logo-dot"></span>
+    </h1>
+    <div class="subtitle">
+      Fuer 3 Personen – Admin-Ansicht fuer Setup und Auswertung, Spieler-Ansicht fuer Tipps. Alle Daten bleiben im
+      Browser (localStorage).
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-section="setup" id="tabSetup">
+        Setup
+        <span class="badge">Personen & Loesungen</span>
+      </button>
+      <button class="tab-btn" data-section="whiskies" id="tabWhiskies">
+        Whiskys
+        <span class="badge">Auswahl (Dropdown)</span>
+      </button>
+      <button class="tab-btn" data-section="guess" id="tabGuess">
+        Tipp abgeben
+        <span class="badge">Tag fuer Tag</span>
+      </button>
+      <button class="tab-btn" data-section="results" id="tabResults">
+        Auswertung
+        <span class="badge">Punkte & Bewertungen</span>
+      </button>
+    </div>
+
+    <!-- SETUP -->
+    <section id="setup" class="section active">
+      <div class="grid-2">
+        <div>
+          <h2>1. Personen festlegen</h2>
+          <div class="card">
+            <div class="card-header">
+              <div>Teilnehmer</div>
+              <div class="pill">genau 3 Personen</div>
+            </div>
+            <label for="player1">Person 1</label>
+            <input type="text" id="player1" placeholder="z. B. Kenji" />
+
+            <label for="player2" style="margin-top: 8px;">Person 2</label>
+            <input type="text" id="player2" placeholder="z. B. Alex" />
+
+            <label for="player3" style="margin-top: 8px;">Person 3</label>
+            <input type="text" id="player3" placeholder="z. B. Sam" />
+
+            <button id="savePlayersBtn" class="btn btn-primary" style="margin-top: 10px;">
+              Personen speichern
+            </button>
+            <div class="hint">
+              Das machst du einmal. Die Namen erscheinen dann im Login, bei Tipps und in der Auswertung.
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h2>2. Loesungen (fuer alle gleich)</h2>
+          <div class="card">
+            <div class="card-header">
+              <div>Loesungen pro Tag</div>
+              <div class="pill">gemeinsam fuer alle</div>
+            </div>
+            <div class="hint">
+              Hier traegst du ein, welcher Whisky an welchem Tag wirklich im Glas ist. Diese Loesung gilt fuer alle
+              Personen.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 14px;">
+        <div class="card-header">
+          <div>Loesungen fuer alle Personen</div>
+          <div class="pill">24 Tage</div>
+        </div>
+        <div class="scroll-container">
+          <table id="solutionTable">
+            <thead>
+              <tr>
+                <th style="width: 60px;">Tag</th>
+                <th>Whisky (aus Liste)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Dynamisch per JS -->
+            </tbody>
+          </table>
+        </div>
+        <button id="saveSolutionsBtn" class="btn btn-primary" style="margin-top: 10px;">
+          Loesungen speichern
+        </button>
+        <div id="solutionToast" class="toast toast-info" style="display: none;"></div>
+      </div>
+
+      <div class="card" style="margin-top: 8px;">
+        <div class="card-header">
+          <div>Zugaenge / Codes</div>
+          <div class="pill">nur Admin</div>
+        </div>
+        <div class="flex" style="flex-wrap: wrap; gap:8px;">
+          <button id="resetAdminCodeBtn" class="btn btn-outline btn-small">Admin-Code zuruecksetzen</button>
+          <button id="resetPlayer1CodeBtn" class="btn btn-outline btn-small">
+            Code fuer Person&nbsp;1 zuruecksetzen
+          </button>
+          <button id="resetPlayer2CodeBtn" class="btn btn-outline btn-small">
+            Code fuer Person&nbsp;2 zuruecksetzen
+          </button>
+          <button id="resetPlayer3CodeBtn" class="btn btn-outline btn-small">
+            Code fuer Person&nbsp;3 zuruecksetzen
+          </button>
+        </div>
+        <div id="resetCodeToast" class="toast toast-success" style="display:none;"></div>
+        <div class="hint">
+          Beim Zuruecksetzen wird nur der Code geloescht. Alle Namen, Whisky-Daten, Bewertungen, Bemerkungen und Tipps
+          bleiben erhalten.
+        </div>
+      </div>
+    </section>
+
+    <!-- WHISKY LIST -->
+    <section id="whiskies" class="section">
+      <h2>Whisky-Liste (fuer Dropdown)</h2>
+      <div class="card">
+        <div class="card-header">
+          <div>Auswahl verwalten</div>
+          <div class="pill">alphabetisch sortiert</div>
+        </div>
+        <label for="whiskyListInput">
+          Whiskys (ein Name pro Zeile)
+        </label>
+        <textarea
+          id="whiskyListInput"
+          placeholder="z. B.&#10Lagavulin 16&#10Ardbeg Uigeadail&#10Kilkerran 12&#10..."
+        ></textarea>
+        <button id="saveWhiskyListBtn" class="btn btn-primary">
+          Whisky-Liste speichern
+        </button>
+        <div id="whiskyListToast" class="toast toast-info" style="display:none;"></div>
+        <div class="hint">
+          Beim Speichern werden leere Zeilen entfernt, Duplikate zusammengefasst und alles nach Name sortiert. Diese
+          Liste wird in Setup und beim Tipp als Dropdown verwendet.
+        </div>
+      </div>
+    </section>
+
+    <!-- GUESS -->
+    <section id="guess" class="section">
+      <h2>Tipp abgeben</h2>
+      <div class="grid-2">
+        <div>
+          <div class="card">
+            <div class="card-header">
+              <div>Einstellungen</div>
+              <div class="pill">Tasting</div>
+            </div>
+            <div id="guessPlayerRow">
+              <label for="guessPlayerSelect">Fuer welchen Kalender?</label>
+              <select id="guessPlayerSelect"></select>
+            </div>
+            <div id="guessPlayerInfo" class="hint hidden" style="margin-bottom: 6px;">
+              Du bist angemeldet als <span id="guessPlayerInfoName"></span>. Du gibst Tipps fuer deinen eigenen Kalender
+              ab.
+            </div>
+
+            <label for="guessDaySelect" style="margin-top: 8px;">Tag</label>
+            <select id="guessDaySelect"></select>
+
+            <label for="guessSelect" style="margin-top: 8px;">Dein Tipp (Whisky)</label>
+            <select id="guessSelect"></select>
+
+            <label for="guessRatingSelect" style="margin-top: 8px;">Bewertung (1–10)</label>
+            <select id="guessRatingSelect">
+              <option value="">-- keine Bewertung --</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="8">8</option>
+              <option value="9">9</option>
+              <option value="10">10</option>
+            </select>
+
+            <label for="guessNoteInput" style="margin-top: 8px;">Bemerkung</label>
+            <textarea id="guessNoteInput" placeholder="Aromen, Eindruck, Vergleich ..."></textarea>
+
+            <button id="saveGuessBtn" class="btn btn-primary">
+              Tipp speichern
+            </button>
+            <div id="guessToast" class="toast" style="display: none;"></div>
+            <div class="hint">
+              Die Auswahl kommt aus der Whisky-Liste. Bewertung und Bemerkung sind optional, aber praktisch fuer spaetere
+              Diskussionen.
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card">
+            <div class="card-header">
+              <div>Bereits abgegebene Tipps</div>
+              <div class="pill">uebersicht</div>
+            </div>
+            <div class="scroll-container">
+              <table id="guessOverviewTable">
+                <thead>
+                  <tr>
+                    <th style="width: 60px;">Tag</th>
+                    <th>Tipp</th>
+                    <th style="width: 70px;">Bewertung</th>
+                    <th>Bemerkung</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RESULTS -->
+    <section id="results" class="section">
+      <h2>Auswertung</h2>
+      <div class="card">
+        <div class="card-header">
+          <div>Wer soll ausgewertet werden?</div>
+          <div class="pill">Scoreboard</div>
+        </div>
+        <div class="flex">
+          <div class="flex-grow">
+            <label for="resultsPlayerSelect">Person</label>
+            <select id="resultsPlayerSelect"></select>
+          </div>
+          <button id="refreshResultsBtn" class="btn btn-outline">
+            Aktualisieren
+          </button>
+        </div>
+        <div id="scoreSummary" class="score-summary" style="margin-top: 10px;">
+          <span>Richtige Tipps: <strong>0 / 24</strong></span>
+        </div>
+
+        <div class="scroll-container" style="margin-top: 10px;">
+          <table id="resultsTable">
+            <thead>
+              <tr>
+                <th style="width: 60px;">Tag</th>
+                <th>Loesung</th>
+                <th>Tipp</th>
+                <th style="width: 70px;">Bewertung</th>
+                <th>Bemerkung</th>
+                <th>Ergebnis</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "whisky_advent_app_v5";
+
+    function defaultState() {
+      return {
+        players: ["Person 1", "Person 2", "Person 3"],
+        // gemeinsame Loesungen fuer alle Personen
+        solutions: {},
+        // pro Person: Tipps, Bewertungen, Notizen
+        calendars: [
+          { guesses: {}, ratings: {}, notes: {} },
+          { guesses: {}, ratings: {}, notes: {} },
+          { guesses: {}, ratings: {}, notes: {} },
+        ],
+        whiskyList: [],
+        pins: {
+          admin: null,
+          players: [null, null, null],
+        },
+      };
+    }
+
+    function loadData() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          return defaultState();
+        }
+        const parsed = JSON.parse(raw);
+
+        // Spieler-Namen
+        if (!Array.isArray(parsed.players) || parsed.players.length !== 3) {
+          parsed.players = ["Person 1", "Person 2", "Person 3"];
+        }
+
+        // Loesungen: global, ggf. aus alter Struktur uebernehmen
+        if (!parsed.solutions || typeof parsed.solutions !== "object") {
+          parsed.solutions = {};
+          if (Array.isArray(parsed.calendars) && parsed.calendars[0] && parsed.calendars[0].solutions) {
+            parsed.solutions = parsed.calendars[0].solutions;
+          }
+        }
+
+        // Kalender fuer Tipps / Bewertungen / Notizen
+        if (!Array.isArray(parsed.calendars) || parsed.calendars.length !== 3) {
+          parsed.calendars = [
+            { guesses: {}, ratings: {}, notes: {} },
+            { guesses: {}, ratings: {}, notes: {} },
+            { guesses: {}, ratings: {}, notes: {} },
+          ];
+        } else {
+          parsed.calendars.forEach((c, i) => {
+            if (!c) parsed.calendars[i] = { guesses: {}, ratings: {}, notes: {} };
+            if (!parsed.calendars[i].guesses) parsed.calendars[i].guesses = {};
+            if (!parsed.calendars[i].ratings) parsed.calendars[i].ratings = {};
+            if (!parsed.calendars[i].notes) parsed.calendars[i].notes = {};
+          });
+        }
+
+        if (!Array.isArray(parsed.whiskyList)) {
+          parsed.whiskyList = [];
+        }
+
+        if (!parsed.pins || typeof parsed.pins !== "object") {
+          parsed.pins = { admin: null, players: [null, null, null] };
+        } else {
+          if (typeof parsed.pins.admin !== "string") {
+            parsed.pins.admin = parsed.pins.admin || null;
+          }
+          if (!Array.isArray(parsed.pins.players) || parsed.pins.players.length !== 3) {
+            parsed.pins.players = [null, null, null];
+          }
+        }
+        return parsed;
+      } catch (e) {
+        console.error("Fehler beim Laden, verwende Defaults", e);
+        return defaultState();
+      }
+    }
+
+    function saveData() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+    }
+
+    let appState = loadData();
+
+    // Rolle: { type: "admin" } oder { type: "player", index: 0-2 }
+    let currentRole = null;
+    let currentLoginPlayerIndex = null;
+
+    // DOM Elemente
+    const tabButtons = document.querySelectorAll(".tab-btn");
+    const sections = document.querySelectorAll(".section");
+    const tabSetup = document.getElementById("tabSetup");
+    const tabWhiskies = document.getElementById("tabWhiskies");
+    const tabGuess = document.getElementById("tabGuess");
+    const tabResults = document.getElementById("tabResults");
+
+    const playerInputs = [
+      document.getElementById("player1"),
+      document.getElementById("player2"),
+      document.getElementById("player3"),
+    ];
+    const savePlayersBtn = document.getElementById("savePlayersBtn");
+
+    const solutionTableBody = document.querySelector("#solutionTable tbody");
+    const saveSolutionsBtn = document.getElementById("saveSolutionsBtn");
+    const solutionToast = document.getElementById("solutionToast");
+
+    const whiskyListInput = document.getElementById("whiskyListInput");
+    const saveWhiskyListBtn = document.getElementById("saveWhiskyListBtn");
+    const whiskyListToast = document.getElementById("whiskyListToast");
+
+    const guessPlayerSelect = document.getElementById("guessPlayerSelect");
+    const guessPlayerRow = document.getElementById("guessPlayerRow");
+    const guessPlayerInfo = document.getElementById("guessPlayerInfo");
+    const guessPlayerInfoName = document.getElementById("guessPlayerInfoName");
+    const guessDaySelect = document.getElementById("guessDaySelect");
+    const guessSelect = document.getElementById("guessSelect");
+    const guessRatingSelect = document.getElementById("guessRatingSelect");
+    const guessNoteInput = document.getElementById("guessNoteInput");
+    const saveGuessBtn = document.getElementById("saveGuessBtn");
+    const guessToast = document.getElementById("guessToast");
+    const guessOverviewTableBody = document.querySelector("#guessOverviewTable tbody");
+
+    const resultsPlayerSelect = document.getElementById("resultsPlayerSelect");
+    const refreshResultsBtn = document.getElementById("refreshResultsBtn");
+    const resultsTableBody = document.querySelector("#resultsTable tbody");
+    const scoreSummary = document.getElementById("scoreSummary");
+
+    // Login-Overlay
+    const loginOverlay = document.getElementById("loginOverlay");
+
+    const adminFirstLogin = document.getElementById("adminFirstLogin");
+    const adminNewPinInput = document.getElementById("adminNewPinInput");
+    const adminNewPinConfirmInput = document.getElementById("adminNewPinConfirmInput");
+    const adminSetPinBtn = document.getElementById("adminSetPinBtn");
+
+    const adminLoginExisting = document.getElementById("adminLoginExisting");
+    const adminPinInput = document.getElementById("adminPinInput");
+    const adminLoginBtn = document.getElementById("adminLoginBtn");
+    const adminLoginToast = document.getElementById("adminLoginToast");
+
+    const loginPlayerButtons = document.querySelectorAll(".login-player-btn");
+    const loginPlayerName1 = document.getElementById("loginPlayerName1");
+    const loginPlayerName2 = document.getElementById("loginPlayerName2");
+    const loginPlayerName3 = document.getElementById("loginPlayerName3");
+
+    const playerLoginDetail = document.getElementById("playerLoginDetail");
+    const playerLoginTitle = document.getElementById("playerLoginTitle");
+    const playerFirstLogin = document.getElementById("playerFirstLogin");
+    const playerNewPinInput = document.getElementById("playerNewPinInput");
+    const playerNewPinConfirmInput = document.getElementById("playerNewPinConfirmInput");
+    const playerSetPinBtn = document.getElementById("playerSetPinBtn");
+
+    const playerLoginExisting = document.getElementById("playerLoginExisting");
+    const playerPinInput = document.getElementById("playerPinInput");
+    const playerLoginBtn = document.getElementById("playerLoginBtn");
+    const playerLoginToast = document.getElementById("playerLoginToast");
+
+    const currentRoleBadge = document.getElementById("currentRoleBadge");
+    const currentRoleName = document.getElementById("currentRoleName");
+    const logoutBtn = document.getElementById("logoutBtn");
+
+    const resetAdminCodeBtn = document.getElementById("resetAdminCodeBtn");
+    const resetPlayer1CodeBtn = document.getElementById("resetPlayer1CodeBtn");
+    const resetPlayer2CodeBtn = document.getElementById("resetPlayer2CodeBtn");
+    const resetPlayer3CodeBtn = document.getElementById("resetPlayer3CodeBtn");
+    const resetCodeToast = document.getElementById("resetCodeToast");
+
+    function switchTab(sectionId) {
+      sections.forEach((sec) => {
+        sec.classList.toggle("active", sec.id === sectionId);
+      });
+      tabButtons.forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.section === sectionId);
+      });
+    }
+
+    tabButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        switchTab(btn.dataset.section);
+      });
+    });
+
+    function renderPlayerInputs() {
+      appState.players.forEach((name, idx) => {
+        playerInputs[idx].value = name;
+      });
+      // Login Button Texte aktualisieren
+      loginPlayerName1.textContent = appState.players[0] || "Person 1";
+      loginPlayerName2.textContent = appState.players[1] || "Person 2";
+      loginPlayerName3.textContent = appState.players[2] || "Person 3";
+    }
+
+    function renderPlayerSelects() {
+      const selects = [guessPlayerSelect, resultsPlayerSelect];
+      selects.forEach((sel) => {
+        sel.innerHTML = "";
+        appState.players.forEach((name, idx) => {
+          const opt = document.createElement("option");
+          opt.value = String(idx);
+          opt.textContent = name;
+          sel.appendChild(opt);
+        });
+      });
+    }
+
+    function ensureCalendar(idx) {
+      if (!appState.calendars[idx]) {
+        appState.calendars[idx] = { guesses: {}, ratings: {}, notes: {} };
+      } else {
+        if (!appState.calendars[idx].guesses) appState.calendars[idx].guesses = {};
+        if (!appState.calendars[idx].ratings) appState.calendars[idx].ratings = {};
+        if (!appState.calendars[idx].notes) appState.calendars[idx].notes = {};
+      }
+    }
+
+    function getSortedWhiskyList() {
+      const list = Array.isArray(appState.whiskyList) ? [...appState.whiskyList] : [];
+      list.sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+      return list;
+    }
+
+    function populateWhiskySelect(selectElement, currentValue) {
+      const list = getSortedWhiskyList();
+      selectElement.innerHTML = "";
+
+      const emptyOpt = document.createElement("option");
+      emptyOpt.value = "";
+      emptyOpt.textContent = list.length ? "-- Whisky waehlen --" : "-- keine Whiskys hinterlegt --";
+      selectElement.appendChild(emptyOpt);
+
+      list.forEach((name) => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        selectElement.appendChild(opt);
+      });
+
+      if (currentValue) {
+        selectElement.value = currentValue;
+      }
+    }
+
+    function renderSolutionTable() {
+      solutionTableBody.innerHTML = "";
+      const whiskyList = getSortedWhiskyList();
+
+      for (let day = 1; day <= 24; day++) {
+        const tr = document.createElement("tr");
+
+        const tdDay = document.createElement("td");
+        tdDay.textContent = String(day).padStart(2, "0");
+        tr.appendChild(tdDay);
+
+        const tdName = document.createElement("td");
+        const select = document.createElement("select");
+        select.id = "solution-day-" + day;
+
+        const emptyOpt = document.createElement("option");
+        emptyOpt.value = "";
+        emptyOpt.textContent = whiskyList.length ? "-- Whisky waehlen --" : "-- erst Whiskys erfassen --";
+        select.appendChild(emptyOpt);
+
+        whiskyList.forEach((name) => {
+          const opt = document.createElement("option");
+          opt.value = name;
+          opt.textContent = name;
+          select.appendChild(opt);
+        });
+
+        const current = appState.solutions[day] || "";
+        if (current) {
+          select.value = current;
+        }
+
+        tdName.appendChild(select);
+        tr.appendChild(tdName);
+
+        solutionTableBody.appendChild(tr);
+      }
+    }
+
+    function renderGuessDaySelect() {
+      guessDaySelect.innerHTML = "";
+      for (let day = 1; day <= 24; day++) {
+        const opt = document.createElement("option");
+        opt.value = String(day);
+        opt.textContent = "Tag " + day;
+        guessDaySelect.appendChild(opt);
+      }
+    }
+
+    function renderGuessWhiskySelect() {
+      const idx = Number(guessPlayerSelect.value || 0);
+      const day = Number(guessDaySelect.value || 1);
+      ensureCalendar(idx);
+      const cal = appState.calendars[idx];
+      const currentGuess = cal.guesses[day] || "";
+      const currentRating = cal.ratings[day] || "";
+      const currentNote = cal.notes[day] || "";
+      populateWhiskySelect(guessSelect, currentGuess);
+      guessRatingSelect.value = currentRating ? String(currentRating) : "";
+      guessNoteInput.value = currentNote || "";
+    }
+
+    function renderGuessOverview() {
+      const idx = Number(guessPlayerSelect.value || 0);
+      ensureCalendar(idx);
+      const cal = appState.calendars[idx];
+
+      guessOverviewTableBody.innerHTML = "";
+      for (let day = 1; day <= 24; day++) {
+        const tr = document.createElement("tr");
+        const tdDay = document.createElement("td");
+        tdDay.textContent = String(day).padStart(2, "0");
+
+        const tdGuess = document.createElement("td");
+        tdGuess.textContent = cal.guesses[day] || "";
+
+        const tdRating = document.createElement("td");
+        tdRating.textContent = cal.ratings[day] ? String(cal.ratings[day]) : "";
+
+        const tdNote = document.createElement("td");
+        tdNote.textContent = cal.notes[day] || "";
+
+        tr.appendChild(tdDay);
+        tr.appendChild(tdGuess);
+        tr.appendChild(tdRating);
+        tr.appendChild(tdNote);
+        guessOverviewTableBody.appendChild(tr);
+      }
+    }
+
+    function renderResults() {
+      const idx = Number(resultsPlayerSelect.value || 0);
+      ensureCalendar(idx);
+      const cal = appState.calendars[idx];
+
+      let correct = 0;
+      let totalWithSolution = 0;
+
+      resultsTableBody.innerHTML = "";
+
+      for (let day = 1; day <= 24; day++) {
+        const solution = appState.solutions[day] || "";
+        const guess = (cal.guesses && cal.guesses[day]) || "";
+        const rating = (cal.ratings && cal.ratings[day]) || "";
+        const note = (cal.notes && cal.notes[day]) || "";
+
+        if (solution) {
+          totalWithSolution++;
+        }
+
+        let isCorrect = false;
+        if (solution && guess && solution.trim() === guess.trim()) {
+          isCorrect = true;
+          correct++;
+        }
+
+        const tr = document.createElement("tr");
+
+        const tdDay = document.createElement("td");
+        tdDay.textContent = String(day).padStart(2, "0");
+        tr.appendChild(tdDay);
+
+        const tdSolution = document.createElement("td");
+        tdSolution.textContent = solution || "-";
+        tr.appendChild(tdSolution);
+
+        const tdGuess = document.createElement("td");
+        tdGuess.textContent = guess || "-";
+        tr.appendChild(tdGuess);
+
+        const tdRating = document.createElement("td");
+        tdRating.textContent = rating ? String(rating) : "";
+        tr.appendChild(tdRating);
+
+        const tdNote = document.createElement("td");
+        tdNote.textContent = note || "";
+        tr.appendChild(tdNote);
+
+        const tdResult = document.createElement("td");
+        if (!solution && !guess) {
+          tdResult.innerHTML = '<span class="tag">keine Daten</span>';
+        } else if (!solution && guess) {
+          tdResult.innerHTML = '<span class="tag tag-error">keine Loesung gepflegt</span>';
+        } else if (solution && !guess) {
+          tdResult.innerHTML = '<span class="tag">kein Tipp</span>';
+        } else {
+          if (isCorrect) {
+            tdResult.innerHTML = '<span class="tag tag-success">richtig</span>';
+          } else {
+            tdResult.innerHTML = '<span class="tag tag-error">falsch</span>';
+          }
+        }
+
+        tr.appendChild(tdResult);
+        resultsTableBody.appendChild(tr);
+      }
+
+      const denominator = totalWithSolution || 24;
+      scoreSummary.innerHTML =
+        'Richtige Tipps: <strong>' + correct + " / " + denominator + "</strong>";
+    }
+
+    // Whisky-Liste Editor
+    function renderWhiskyListEditor() {
+      const list = getSortedWhiskyList();
+      whiskyListInput.value = list.join("\n");
+    }
+
+    // Login-Ansichten aktualisieren
+    function updateLoginView() {
+      const hasAdminPin = appState.pins && appState.pins.admin;
+      if (hasAdminPin) {
+        adminFirstLogin.classList.add("hidden");
+        adminLoginExisting.classList.remove("hidden");
+      } else {
+        adminFirstLogin.classList.remove("hidden");
+        adminLoginExisting.classList.add("hidden");
+      }
+
+      if (currentLoginPlayerIndex === null) {
+        playerLoginDetail.style.display = "none";
+      } else {
+        const idx = currentLoginPlayerIndex;
+        const name = appState.players[idx] || "Teilnehmer " + (idx + 1);
+        playerLoginTitle.textContent = "Login fuer " + name;
+        playerLoginDetail.style.display = "block";
+
+        const hasPlayerPin =
+          appState.pins &&
+          Array.isArray(appState.pins.players) &&
+          appState.pins.players[idx];
+
+        if (hasPlayerPin) {
+          playerFirstLogin.classList.add("hidden");
+          playerLoginExisting.classList.remove("hidden");
+        } else {
+          playerFirstLogin.classList.remove("hidden");
+          playerLoginExisting.classList.add("hidden");
+        }
+
+        playerLoginToast.style.display = "none";
+        playerNewPinInput.value = "";
+        playerNewPinConfirmInput.value = "";
+        playerPinInput.value = "";
+      }
+
+      adminLoginToast.style.display = "none";
+    }
+
+    // Rollen-UI
+    function updateRoleUI() {
+      if (!currentRole) {
+        currentRoleBadge.classList.add("hidden");
+        loginOverlay.style.display = "flex";
+        updateLoginView();
+        return;
+      }
+
+      loginOverlay.style.display = "none";
+      currentRoleBadge.classList.remove("hidden");
+
+      if (currentRole.type === "admin") {
+        currentRoleName.textContent = "Admin";
+
+        tabSetup.classList.remove("hidden");
+        tabWhiskies.classList.remove("hidden");
+        tabResults.classList.remove("hidden");
+
+        guessPlayerRow.classList.remove("hidden");
+        guessPlayerSelect.disabled = false;
+        guessPlayerInfo.classList.add("hidden");
+
+        switchTab("setup");
+      } else if (currentRole.type === "player") {
+        const idx = currentRole.index;
+        const name = appState.players[idx] || "Teilnehmer " + (idx + 1);
+        currentRoleName.textContent = name;
+
+        tabSetup.classList.add("hidden");
+        tabWhiskies.classList.add("hidden");
+        tabResults.classList.add("hidden");
+
+        switchTab("guess");
+
+        guessPlayerRow.classList.add("hidden");
+        guessPlayerSelect.value = String(idx);
+        guessPlayerSelect.disabled = true;
+        guessPlayerInfoName.textContent = name;
+        guessPlayerInfo.classList.remove("hidden");
+
+        renderGuessOverview();
+        renderGuessWhiskySelect();
+      }
+    }
+
+    // Events
+
+    savePlayersBtn.addEventListener("click", () => {
+      const names = playerInputs.map((inp, idx) => {
+        const v = inp.value.trim();
+        return v || "Person " + (idx + 1);
+      });
+      appState.players = names;
+      saveData();
+      renderPlayerSelects();
+      renderGuessOverview();
+      renderResults();
+      renderGuessWhiskySelect();
+      renderPlayerInputs();
+    });
+
+    saveSolutionsBtn.addEventListener("click", () => {
+      for (let day = 1; day <= 24; day++) {
+        const select = document.getElementById("solution-day-" + day);
+        if (select) {
+          const v = select.value.trim();
+          if (v) {
+            appState.solutions[day] = v;
+          } else {
+            delete appState.solutions[day];
+          }
+        }
+      }
+      saveData();
+      solutionToast.textContent = "Loesungen gespeichert.";
+      solutionToast.className = "toast toast-success";
+      solutionToast.style.display = "block";
+      setTimeout(() => {
+        solutionToast.style.display = "none";
+      }, 2000);
+      renderResults();
+    });
+
+    saveWhiskyListBtn.addEventListener("click", () => {
+      const raw = whiskyListInput.value.split("\n");
+      const cleaned = raw
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
+      const unique = Array.from(new Set(cleaned));
+      unique.sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+      appState.whiskyList = unique;
+      saveData();
+
+      whiskyListToast.textContent = "Whisky-Liste gespeichert (" + unique.length + " Eintraege).";
+      whiskyListToast.className = "toast toast-success";
+      whiskyListToast.style.display = "block";
+      setTimeout(() => {
+        whiskyListToast.style.display = "none";
+      }, 2000);
+
+      renderSolutionTable();
+      renderGuessWhiskySelect();
+    });
+
+    guessPlayerSelect.addEventListener("change", () => {
+      renderGuessOverview();
+      renderGuessWhiskySelect();
+      guessToast.style.display = "none";
+    });
+
+    guessDaySelect.addEventListener("change", () => {
+      renderGuessWhiskySelect();
+      guessToast.style.display = "none";
+    });
+
+    saveGuessBtn.addEventListener("click", () => {
+      const idx = Number(guessPlayerSelect.value || 0);
+      const day = Number(guessDaySelect.value || 1);
+      const guess = (guessSelect.value || "").trim();
+      const ratingValue = guessRatingSelect.value ? Number(guessRatingSelect.value) : null;
+      const noteValue = guessNoteInput.value.trim();
+
+      if (!guess) {
+        guessToast.textContent = "Bitte einen Whisky auswaehlen.";
+        guessToast.className = "toast toast-error";
+        guessToast.style.display = "block";
+        return;
+      }
+
+      ensureCalendar(idx);
+      const cal = appState.calendars[idx];
+      cal.guesses[day] = guess;
+
+      if (ratingValue && ratingValue >= 1 && ratingValue <= 10) {
+        cal.ratings[day] = ratingValue;
+      } else {
+        delete cal.ratings[day];
+      }
+
+      if (noteValue) {
+        cal.notes[day] = noteValue;
+      } else {
+        delete cal.notes[day];
+      }
+
+      saveData();
+
+      const solution = appState.solutions[day] || "";
+      let msg = "Tipp fuer Tag " + day + " gespeichert.";
+      let cls = "toast toast-success";
+
+      if (solution) {
+        if (solution.trim() === guess.trim()) {
+          msg += " (richtig)";
+        } else {
+          msg += " (falsch – Loesung wird nur in der Auswertung angezeigt).";
+          cls = "toast toast-info";
+        }
+      } else {
+        msg += " (keine Loesung hinterlegt, Auswertung spaeter moeglich).";
+        cls = "toast toast-info";
+      }
+
+      guessToast.textContent = msg;
+      guessToast.className = cls;
+      guessToast.style.display = "block";
+
+      renderGuessOverview();
+      renderResults();
+    });
+
+    resultsPlayerSelect.addEventListener("change", () => {
+      renderResults();
+    });
+    refreshResultsBtn.addEventListener("click", () => {
+      renderResults();
+    });
+
+    // Codes zuruecksetzen
+    function resetCode(role, index) {
+      if (role === "admin") {
+        appState.pins.admin = null;
+        saveData();
+        resetCodeToast.textContent = "Admin-Code wurde zurueckgesetzt.";
+      } else if (role === "player") {
+        appState.pins.players[index] = null;
+        saveData();
+        const name = appState.players[index] || "Person " + (index + 1);
+        resetCodeToast.textContent = "Code fuer " + name + " wurde zurueckgesetzt.";
+      }
+      resetCodeToast.style.display = "block";
+      setTimeout(() => {
+        resetCodeToast.style.display = "none";
+      }, 2000);
+      updateLoginView();
+    }
+
+    resetAdminCodeBtn.addEventListener("click", () => resetCode("admin", null));
+    resetPlayer1CodeBtn.addEventListener("click", () => resetCode("player", 0));
+    resetPlayer2CodeBtn.addEventListener("click", () => resetCode("player", 1));
+    resetPlayer3CodeBtn.addEventListener("click", () => resetCode("player", 2));
+
+    // Login Events
+
+    adminSetPinBtn.addEventListener("click", () => {
+      const pin = adminNewPinInput.value.trim();
+      const confirmPin = adminNewPinConfirmInput.value.trim();
+      if (pin.length < 4) {
+        adminLoginToast.textContent = "Code sollte mindestens 4 Zeichen haben.";
+        adminLoginToast.style.display = "block";
+        return;
+      }
+      if (pin !== confirmPin) {
+        adminLoginToast.textContent = "Code und Bestaetigung stimmen nicht ueberein.";
+        adminLoginToast.style.display = "block";
+        return;
+      }
+      appState.pins.admin = pin;
+      saveData();
+      adminNewPinInput.value = "";
+      adminNewPinConfirmInput.value = "";
+      adminLoginToast.style.display = "none";
+      currentRole = { type: "admin" };
+      updateRoleUI();
+    });
+
+    adminLoginBtn.addEventListener("click", () => {
+      const pin = adminPinInput.value.trim();
+      if (!appState.pins.admin) {
+        adminLoginToast.textContent = "Fuer den Admin ist noch kein Code gesetzt.";
+        adminLoginToast.style.display = "block";
+        return;
+      }
+      if (pin === appState.pins.admin) {
+        adminPinInput.value = "";
+        adminLoginToast.style.display = "none";
+        currentRole = { type: "admin" };
+        updateRoleUI();
+      } else {
+        adminLoginToast.textContent = "Falscher Code.";
+        adminLoginToast.style.display = "block";
+      }
+    });
+
+    loginPlayerButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        currentLoginPlayerIndex = Number(btn.dataset.playerIndex);
+        updateLoginView();
+      });
+    });
+
+    playerSetPinBtn.addEventListener("click", () => {
+      if (currentLoginPlayerIndex === null) return;
+      const pin = playerNewPinInput.value.trim();
+      const confirmPin = playerNewPinConfirmInput.value.trim();
+      if (pin.length < 4) {
+        playerLoginToast.textContent = "Code sollte mindestens 4 Zeichen haben.";
+        playerLoginToast.style.display = "block";
+        return;
+      }
+      if (pin !== confirmPin) {
+        playerLoginToast.textContent = "Code und Bestaetigung stimmen nicht ueberein.";
+        playerLoginToast.style.display = "block";
+        return;
+      }
+      appState.pins.players[currentLoginPlayerIndex] = pin;
+      saveData();
+      const idx = currentLoginPlayerIndex;
+      currentLoginPlayerIndex = null;
+      playerLoginToast.style.display = "none";
+      currentRole = { type: "player", index: idx };
+      updateRoleUI();
+    });
+
+    playerLoginBtn.addEventListener("click", () => {
+      if (currentLoginPlayerIndex === null) return;
+      const idx = currentLoginPlayerIndex;
+      const pin = playerPinInput.value.trim();
+      const expected = appState.pins.players[idx];
+      if (!expected) {
+        playerLoginToast.textContent = "Fuer diese Person ist noch kein Code gesetzt.";
+        playerLoginToast.style.display = "block";
+        return;
+      }
+      if (pin === expected) {
+        currentLoginPlayerIndex = null;
+        playerPinInput.value = "";
+        playerLoginToast.style.display = "none";
+        currentRole = { type: "player", index: idx };
+        updateRoleUI();
+      } else {
+        playerLoginToast.textContent = "Falscher Code.";
+        playerLoginToast.style.display = "block";
+      }
+    });
+
+    logoutBtn.addEventListener("click", () => {
+      currentRole = null;
+      currentLoginPlayerIndex = null;
+      currentRoleBadge.classList.add("hidden");
+      loginOverlay.style.display = "flex";
+      updateLoginView();
+    });
+
+    function init() {
+      renderPlayerInputs();
+      renderPlayerSelects();
+      renderWhiskyListEditor();
+      renderSolutionTable();
+      renderGuessDaySelect();
+      renderGuessOverview();
+      renderGuessWhiskySelect();
+      renderResults();
+      updateRoleUI();
+    }
+
+    init();
+  </script>
+</body>
+</html>
