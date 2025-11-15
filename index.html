@@ -337,6 +337,12 @@
       margin-top: 8px;
     }
 
+    /* Bereits verwendete Whiskys im Dropdown rot markieren */
+    .used-option {
+      background: #7f1d1d;
+      color: #fee2e2;
+    }
+
     /* Login-Overlay */
     #loginOverlay {
       position: fixed;
@@ -553,10 +559,10 @@
             <input type="text" id="player1" placeholder="z. B. Kenji" />
 
             <label for="player2" style="margin-top: 8px;">Person 2</label>
-            <input type="text" id="player2" placeholder="z. B. Alex" />
+            <input type="text" id="player2" placeholder="z. B. Yanick" />
 
             <label for="player3" style="margin-top: 8px;">Person 3</label>
-            <input type="text" id="player3" placeholder="z. B. Sam" />
+            <input type="text" id="player3" placeholder="z. B. Gianluca" />
 
             <button id="savePlayersBtn" class="btn btn-primary" style="margin-top: 10px;">
               Personen speichern
@@ -642,7 +648,7 @@
         </label>
         <textarea
           id="whiskyListInput"
-          placeholder="z. B.&#10Lagavulin 16&#10Ardbeg Uigeadail&#10Kilkerran 12&#10..."
+          placeholder="z. B.&#10Nicolas - Whisky 1&#10Yanick - Whisky 1&#10Gianluca - Whisky 1&#10..."
         ></textarea>
         <button id="saveWhiskyListBtn" class="btn btn-primary">
           Whisky-Liste speichern
@@ -703,8 +709,9 @@
             </button>
             <div id="guessToast" class="toast" style="display: none;"></div>
             <div class="hint">
-              Die Auswahl kommt aus der Whisky-Liste. Bewertung und Bemerkung sind optional, aber praktisch fuer spaetere
-              Diskussionen.
+              Die Auswahl wird nach Besitzer (Nicolas / Yanick / Gianluca) pro Tag gefiltert.
+              Bereits von dir verwendete Whiskys sind rot markiert und mit
+              "(bereits ausgewaehlt)" gekennzeichnet.
             </div>
           </div>
         </div>
@@ -787,16 +794,14 @@
     } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
     // TODO: HIER deine eigene Firebase-Konfiguration einsetzen
-    // Diese Daten findest du in der Firebase-Konsole unter:
-    // Projekt -> Zahnrad (Einstellungen) -> Deine Apps -> Web-App -> Firebase SDK Snippet (Konfiguration)
     const firebaseConfig = {
-     apiKey: "AIzaSyBPWZ0xh9w6YsGhoOhJjD3OI6cSor1I8P0",
-    authDomain: "whiskyadventskalender-2025.firebaseapp.com",
-    projectId: "whiskyadventskalender-2025",
-    storageBucket: "whiskyadventskalender-2025.firebasestorage.app",
-    messagingSenderId: "513773042118",
-    appId: "1:513773042118:web:aa635c3df07376af3e5ac7"
-  };
+      apiKey: "DEIN_API_KEY",
+      authDomain: "DEIN_PROJEKT_ID.firebaseapp.com",
+      projectId: "DEIN_PROJEKT_ID",
+      storageBucket: "DEIN_PROJEKT_ID.appspot.com",
+      messagingSenderId: "DEINE_SENDER_ID",
+      appId: "DEINE_APP_ID"
+    };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
@@ -862,6 +867,29 @@
     }
 
     let appState = defaultState();
+
+    // Zuordnung: welcher Besitzer-Name fuer welchen Tag?
+    function getOwnerSubstringForDay(day) {
+      // day: 1..24
+      const mod = (day - 1) % 3;
+      if (mod === 0) return "Nicolas";   // 1,4,7,10,13,16,19,22
+      if (mod === 1) return "Yanick";    // 2,5,8,11,14,17,20,23
+      return "Gianluca";                 // 3,6,9,12,15,18,21,24
+    }
+
+    // Gefilterte Whisky-Liste fuer einen bestimmten Tag
+    function getSortedWhiskyList() {
+      const list = Array.isArray(appState.whiskyList) ? [...appState.whiskyList] : [];
+      list.sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+      return list;
+    }
+
+    function getWhiskyListForDay(day) {
+      const baseList = getSortedWhiskyList();
+      const ownerSub = getOwnerSubstringForDay(day);
+      const filtered = baseList.filter((name) => name.includes(ownerSub));
+      return filtered;
+    }
 
     // UI-Referenzen
     const tabButtons = document.querySelectorAll(".tab-btn");
@@ -986,36 +1014,8 @@
       }
     }
 
-    function getSortedWhiskyList() {
-      const list = Array.isArray(appState.whiskyList) ? [...appState.whiskyList] : [];
-      list.sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
-      return list;
-    }
-
-    function populateWhiskySelect(selectElement, currentValue) {
-      const list = getSortedWhiskyList();
-      selectElement.innerHTML = "";
-
-      const emptyOpt = document.createElement("option");
-      emptyOpt.value = "";
-      emptyOpt.textContent = list.length ? "-- Whisky waehlen --" : "-- keine Whiskys hinterlegt --";
-      selectElement.appendChild(emptyOpt);
-
-      list.forEach((name) => {
-        const opt = document.createElement("option");
-        opt.value = name;
-        opt.textContent = name;
-        selectElement.appendChild(opt);
-      });
-
-      if (currentValue) {
-        selectElement.value = currentValue;
-      }
-    }
-
     function renderSolutionTable() {
       solutionTableBody.innerHTML = "";
-      const whiskyList = getSortedWhiskyList();
 
       for (let day = 1; day <= 24; day++) {
         const tr = document.createElement("tr");
@@ -1028,12 +1028,18 @@
         const select = document.createElement("select");
         select.id = "solution-day-" + day;
 
+        const listForDay = getWhiskyListForDay(day);
+
         const emptyOpt = document.createElement("option");
         emptyOpt.value = "";
-        emptyOpt.textContent = whiskyList.length ? "-- Whisky waehlen --" : "-- erst Whiskys erfassen --";
+        if (listForDay.length === 0) {
+          emptyOpt.textContent = "-- keine passenden Whiskys (Name im Text fehlt) --";
+        } else {
+          emptyOpt.textContent = "-- Whisky waehlen --";
+        }
         select.appendChild(emptyOpt);
 
-        whiskyList.forEach((name) => {
+        listForDay.forEach((name) => {
           const opt = document.createElement("option");
           opt.value = name;
           opt.textContent = name;
@@ -1062,15 +1068,59 @@
       }
     }
 
+    // Dropdown fuer Tippabgabe: Whiskys nach Tag filtern und bereits verwendete markieren
+    function populateWhiskySelect(selectElement, currentValue, day, usedSet) {
+      const list = getWhiskyListForDay(day);
+      selectElement.innerHTML = "";
+
+      const emptyOpt = document.createElement("option");
+      emptyOpt.value = "";
+      if (list.length === 0) {
+        emptyOpt.textContent = "-- keine passenden Whiskys (Name im Text fehlt) --";
+      } else {
+        emptyOpt.textContent = "-- Whisky waehlen --";
+      }
+      selectElement.appendChild(emptyOpt);
+
+      list.forEach((name) => {
+        const opt = document.createElement("option");
+        opt.value = name;
+
+        if (usedSet && usedSet.has(name)) {
+          opt.classList.add("used-option");
+          opt.textContent = name + " (bereits ausgewaehlt)";
+        } else {
+          opt.textContent = name;
+        }
+
+        selectElement.appendChild(opt);
+      });
+
+      if (currentValue) {
+        selectElement.value = currentValue;
+      }
+    }
+
     function renderGuessWhiskySelect() {
       const idx = Number(guessPlayerSelect.value || 0);
       const day = Number(guessDaySelect.value || 1);
       ensureCalendar(idx);
       const cal = appState.calendars[idx];
+
       const currentGuess = cal.guesses[day] || "";
       const currentRating = cal.ratings[day] || "";
       const currentNote = cal.notes[day] || "";
-      populateWhiskySelect(guessSelect, currentGuess);
+
+      // alle bisher von dieser Person verwendeten Whiskys (andere Tage)
+      const usedWhiskies = new Set(
+        Object.entries(cal.guesses || {})
+          .filter(([d]) => Number(d) !== day)
+          .map(([, val]) => val)
+          .filter((v) => !!v)
+      );
+
+      populateWhiskySelect(guessSelect, currentGuess, day, usedWhiskies);
+
       guessRatingSelect.value = currentRating ? String(currentRating) : "";
       guessNoteInput.value = currentNote || "";
     }
@@ -1379,6 +1429,7 @@
       guessToast.style.display = "block";
 
       renderGuessOverview();
+      renderGuessWhiskySelect();
       renderResults();
     });
 
