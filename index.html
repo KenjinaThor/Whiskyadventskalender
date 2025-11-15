@@ -408,6 +408,18 @@
       font-weight: 500;
     }
 
+    #loadingOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+      color: #e5e7eb;
+      font-size: 1rem;
+    }
+
     @media (max-width: 700px) {
       .app {
         padding: 14px 12px 20px;
@@ -419,8 +431,11 @@
   </style>
 </head>
 <body>
+  <!-- Loading Overlay fuer Firestore -->
+  <div id="loadingOverlay">Daten werden geladen ...</div>
+
   <!-- Login-Overlay -->
-  <div id="loginOverlay">
+  <div id="loginOverlay" class="hidden">
     <div id="loginCard">
       <h2>Anmeldung</h2>
       <div class="subtitle" style="margin-bottom: 10px;">
@@ -430,19 +445,8 @@
       <div class="login-section">
         <div class="login-section-title">Administrator</div>
 
-        <!-- Admin: erster Login (Code setzen) -->
-        <div id="adminFirstLogin">
-          <label for="adminNewPinInput">Neuer Admin-Code</label>
-          <input type="password" id="adminNewPinInput" placeholder="mindestens 4 Zeichen" />
-          <label for="adminNewPinConfirmInput" style="margin-top:6px;">Code bestaetigen</label>
-          <input type="password" id="adminNewPinConfirmInput" placeholder="noch einmal eingeben" />
-          <button id="adminSetPinBtn" class="btn btn-primary" style="margin-top: 8px;">
-            Admin-Code setzen und anmelden
-          </button>
-        </div>
-
-        <!-- Admin: bestehender Code -->
-        <div id="adminLoginExisting" class="hidden">
+        <!-- Admin mit festem Passwort -->
+        <div id="adminLoginExisting">
           <label for="adminPinInput">Admin-Code</label>
           <input type="password" id="adminPinInput" placeholder="Admin-Code eingeben" />
           <button id="adminLoginBtn" class="btn btn-primary" style="margin-top: 8px;">
@@ -512,8 +516,8 @@
       <span class="logo-dot"></span>
     </h1>
     <div class="subtitle">
-      Fuer 3 Personen – Admin-Ansicht fuer Setup und Auswertung, Spieler-Ansicht fuer Tipps. Alle Daten bleiben im
-      Browser (localStorage).
+      Fuer 3 Personen – Admin-Ansicht fuer Setup und Auswertung, Spieler-Ansicht fuer Tipps. Daten werden zentral in
+      Firebase Firestore gespeichert.
     </div>
 
     <div class="tabs">
@@ -592,7 +596,6 @@
               </tr>
             </thead>
             <tbody>
-              <!-- Dynamisch per JS -->
             </tbody>
           </table>
         </div>
@@ -605,10 +608,9 @@
       <div class="card" style="margin-top: 8px;">
         <div class="card-header">
           <div>Zugaenge / Codes</div>
-          <div class="pill">nur Admin</div>
+          <div class="pill">Codes fuer Teilnehmer</div>
         </div>
         <div class="flex" style="flex-wrap: wrap; gap:8px;">
-          <button id="resetAdminCodeBtn" class="btn btn-outline btn-small">Admin-Code zuruecksetzen</button>
           <button id="resetPlayer1CodeBtn" class="btn btn-outline btn-small">
             Code fuer Person&nbsp;1 zuruecksetzen
           </button>
@@ -622,7 +624,7 @@
         <div id="resetCodeToast" class="toast toast-success" style="display:none;"></div>
         <div class="hint">
           Beim Zuruecksetzen wird nur der Code geloescht. Alle Namen, Whisky-Daten, Bewertungen, Bemerkungen und Tipps
-          bleiben erhalten.
+          bleiben in Firestore erhalten.
         </div>
       </div>
     </section>
@@ -724,7 +726,6 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <!-- JS -->
                 </tbody>
               </table>
             </div>
@@ -767,7 +768,6 @@
               </tr>
             </thead>
             <tbody>
-              <!-- JS -->
             </tbody>
           </table>
         </div>
@@ -775,97 +775,95 @@
     </section>
   </div>
 
-  <script>
-    const STORAGE_KEY = "whisky_advent_app_v5";
+  <!-- Firebase + App-Logik -->
+  <script type="module">
+    // Firebase SDKs von CDN laden
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      setDoc
+    } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+    // TODO: HIER deine eigene Firebase-Konfiguration einsetzen
+    // Diese Daten findest du in der Firebase-Konsole unter:
+    // Projekt -> Zahnrad (Einstellungen) -> Deine Apps -> Web-App -> Firebase SDK Snippet (Konfiguration)
+    const firebaseConfig = {
+     apiKey: "AIzaSyBPWZ0xh9w6YsGhoOhJjD3OI6cSor1I8P0",
+    authDomain: "whiskyadventskalender-2025.firebaseapp.com",
+    projectId: "whiskyadventskalender-2025",
+    storageBucket: "whiskyadventskalender-2025.firebasestorage.app",
+    messagingSenderId: "513773042118",
+    appId: "1:513773042118:web:aa635c3df07376af3e5ac7"
+  };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const ADMIN_PASSWORD = "+KenJiNIcolaS10.1997.21!";
+
+    const STATE_DOC_PATH = { col: "whiskyAdvent", id: "state" };
 
     function defaultState() {
       return {
         players: ["Person 1", "Person 2", "Person 3"],
-        // gemeinsame Loesungen fuer alle Personen
         solutions: {},
-        // pro Person: Tipps, Bewertungen, Notizen
         calendars: [
           { guesses: {}, ratings: {}, notes: {} },
           { guesses: {}, ratings: {}, notes: {} },
-          { guesses: {}, ratings: {}, notes: {} },
+          { guesses: {}, ratings: {}, notes: {} }
         ],
         whiskyList: [],
         pins: {
-          admin: null,
-          players: [null, null, null],
-        },
+          players: [null, null, null]
+        }
       };
     }
 
-    function loadData() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) {
-          return defaultState();
-        }
-        const parsed = JSON.parse(raw);
-
-        // Spieler-Namen
-        if (!Array.isArray(parsed.players) || parsed.players.length !== 3) {
-          parsed.players = ["Person 1", "Person 2", "Person 3"];
-        }
-
-        // Loesungen: global, ggf. aus alter Struktur uebernehmen
-        if (!parsed.solutions || typeof parsed.solutions !== "object") {
-          parsed.solutions = {};
-          if (Array.isArray(parsed.calendars) && parsed.calendars[0] && parsed.calendars[0].solutions) {
-            parsed.solutions = parsed.calendars[0].solutions;
-          }
-        }
-
-        // Kalender fuer Tipps / Bewertungen / Notizen
-        if (!Array.isArray(parsed.calendars) || parsed.calendars.length !== 3) {
-          parsed.calendars = [
-            { guesses: {}, ratings: {}, notes: {} },
-            { guesses: {}, ratings: {}, notes: {} },
-            { guesses: {}, ratings: {}, notes: {} },
-          ];
-        } else {
-          parsed.calendars.forEach((c, i) => {
-            if (!c) parsed.calendars[i] = { guesses: {}, ratings: {}, notes: {} };
-            if (!parsed.calendars[i].guesses) parsed.calendars[i].guesses = {};
-            if (!parsed.calendars[i].ratings) parsed.calendars[i].ratings = {};
-            if (!parsed.calendars[i].notes) parsed.calendars[i].notes = {};
-          });
-        }
-
-        if (!Array.isArray(parsed.whiskyList)) {
-          parsed.whiskyList = [];
-        }
-
-        if (!parsed.pins || typeof parsed.pins !== "object") {
-          parsed.pins = { admin: null, players: [null, null, null] };
-        } else {
-          if (typeof parsed.pins.admin !== "string") {
-            parsed.pins.admin = parsed.pins.admin || null;
-          }
-          if (!Array.isArray(parsed.pins.players) || parsed.pins.players.length !== 3) {
-            parsed.pins.players = [null, null, null];
-          }
-        }
-        return parsed;
-      } catch (e) {
-        console.error("Fehler beim Laden, verwende Defaults", e);
-        return defaultState();
+    function normalizeState(raw) {
+      const base = defaultState();
+      if (raw && Array.isArray(raw.players) && raw.players.length === 3) {
+        base.players = raw.players;
       }
+      if (raw && raw.solutions && typeof raw.solutions === "object") {
+        base.solutions = raw.solutions;
+      }
+      if (raw && Array.isArray(raw.calendars) && raw.calendars.length === 3) {
+        base.calendars = raw.calendars.map((c) => ({
+          guesses: c && c.guesses ? c.guesses : {},
+          ratings: c && c.ratings ? c.ratings : {},
+          notes: c && c.notes ? c.notes : {}
+        }));
+      }
+      if (raw && Array.isArray(raw.whiskyList)) {
+        base.whiskyList = raw.whiskyList;
+      }
+      if (raw && raw.pins && Array.isArray(raw.pins.players) && raw.pins.players.length === 3) {
+        base.pins.players = raw.pins.players;
+      }
+      return base;
     }
 
-    function saveData() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+    async function loadStateFromFirestore() {
+      const ref = doc(db, STATE_DOC_PATH.col, STATE_DOC_PATH.id);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
+        const initial = defaultState();
+        await setDoc(ref, initial);
+        return initial;
+      }
+      return normalizeState(snap.data());
     }
 
-    let appState = loadData();
+    async function saveStateToFirestore() {
+      const ref = doc(db, STATE_DOC_PATH.col, STATE_DOC_PATH.id);
+      await setDoc(ref, appState);
+    }
 
-    // Rolle: { type: "admin" } oder { type: "player", index: 0-2 }
-    let currentRole = null;
-    let currentLoginPlayerIndex = null;
+    let appState = defaultState();
 
-    // DOM Elemente
+    // UI-Referenzen
     const tabButtons = document.querySelectorAll(".tab-btn");
     const sections = document.querySelectorAll(".section");
     const tabSetup = document.getElementById("tabSetup");
@@ -905,15 +903,7 @@
     const resultsTableBody = document.querySelector("#resultsTable tbody");
     const scoreSummary = document.getElementById("scoreSummary");
 
-    // Login-Overlay
     const loginOverlay = document.getElementById("loginOverlay");
-
-    const adminFirstLogin = document.getElementById("adminFirstLogin");
-    const adminNewPinInput = document.getElementById("adminNewPinInput");
-    const adminNewPinConfirmInput = document.getElementById("adminNewPinConfirmInput");
-    const adminSetPinBtn = document.getElementById("adminSetPinBtn");
-
-    const adminLoginExisting = document.getElementById("adminLoginExisting");
     const adminPinInput = document.getElementById("adminPinInput");
     const adminLoginBtn = document.getElementById("adminLoginBtn");
     const adminLoginToast = document.getElementById("adminLoginToast");
@@ -939,11 +929,15 @@
     const currentRoleName = document.getElementById("currentRoleName");
     const logoutBtn = document.getElementById("logoutBtn");
 
-    const resetAdminCodeBtn = document.getElementById("resetAdminCodeBtn");
     const resetPlayer1CodeBtn = document.getElementById("resetPlayer1CodeBtn");
     const resetPlayer2CodeBtn = document.getElementById("resetPlayer2CodeBtn");
     const resetPlayer3CodeBtn = document.getElementById("resetPlayer3CodeBtn");
     const resetCodeToast = document.getElementById("resetCodeToast");
+
+    const loadingOverlay = document.getElementById("loadingOverlay");
+
+    let currentRole = null;
+    let currentLoginPlayerIndex = null;
 
     function switchTab(sectionId) {
       sections.forEach((sec) => {
@@ -964,7 +958,6 @@
       appState.players.forEach((name, idx) => {
         playerInputs[idx].value = name;
       });
-      // Login Button Texte aktualisieren
       loginPlayerName1.textContent = appState.players[0] || "Person 1";
       loginPlayerName2.textContent = appState.players[1] || "Person 2";
       loginPlayerName3.textContent = appState.players[2] || "Person 3";
@@ -1179,26 +1172,15 @@
 
       const denominator = totalWithSolution || 24;
       scoreSummary.innerHTML =
-        'Richtige Tipps: <strong>' + correct + " / " + denominator + "</strong>";
+        "Richtige Tipps: <strong>" + correct + " / " + denominator + "</strong>";
     }
 
-    // Whisky-Liste Editor
     function renderWhiskyListEditor() {
       const list = getSortedWhiskyList();
       whiskyListInput.value = list.join("\n");
     }
 
-    // Login-Ansichten aktualisieren
     function updateLoginView() {
-      const hasAdminPin = appState.pins && appState.pins.admin;
-      if (hasAdminPin) {
-        adminFirstLogin.classList.add("hidden");
-        adminLoginExisting.classList.remove("hidden");
-      } else {
-        adminFirstLogin.classList.remove("hidden");
-        adminLoginExisting.classList.add("hidden");
-      }
-
       if (currentLoginPlayerIndex === null) {
         playerLoginDetail.style.display = "none";
       } else {
@@ -1229,16 +1211,15 @@
       adminLoginToast.style.display = "none";
     }
 
-    // Rollen-UI
     function updateRoleUI() {
       if (!currentRole) {
         currentRoleBadge.classList.add("hidden");
-        loginOverlay.style.display = "flex";
+        loginOverlay.classList.remove("hidden");
         updateLoginView();
         return;
       }
 
-      loginOverlay.style.display = "none";
+      loginOverlay.classList.add("hidden");
       currentRoleBadge.classList.remove("hidden");
 
       if (currentRole.type === "admin") {
@@ -1277,13 +1258,13 @@
 
     // Events
 
-    savePlayersBtn.addEventListener("click", () => {
+    savePlayersBtn.addEventListener("click", async () => {
       const names = playerInputs.map((inp, idx) => {
         const v = inp.value.trim();
         return v || "Person " + (idx + 1);
       });
       appState.players = names;
-      saveData();
+      await saveStateToFirestore();
       renderPlayerSelects();
       renderGuessOverview();
       renderResults();
@@ -1291,7 +1272,7 @@
       renderPlayerInputs();
     });
 
-    saveSolutionsBtn.addEventListener("click", () => {
+    saveSolutionsBtn.addEventListener("click", async () => {
       for (let day = 1; day <= 24; day++) {
         const select = document.getElementById("solution-day-" + day);
         if (select) {
@@ -1303,7 +1284,7 @@
           }
         }
       }
-      saveData();
+      await saveStateToFirestore();
       solutionToast.textContent = "Loesungen gespeichert.";
       solutionToast.className = "toast toast-success";
       solutionToast.style.display = "block";
@@ -1313,7 +1294,7 @@
       renderResults();
     });
 
-    saveWhiskyListBtn.addEventListener("click", () => {
+    saveWhiskyListBtn.addEventListener("click", async () => {
       const raw = whiskyListInput.value.split("\n");
       const cleaned = raw
         .map((l) => l.trim())
@@ -1321,7 +1302,7 @@
       const unique = Array.from(new Set(cleaned));
       unique.sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
       appState.whiskyList = unique;
-      saveData();
+      await saveStateToFirestore();
 
       whiskyListToast.textContent = "Whisky-Liste gespeichert (" + unique.length + " Eintraege).";
       whiskyListToast.className = "toast toast-success";
@@ -1345,7 +1326,7 @@
       guessToast.style.display = "none";
     });
 
-    saveGuessBtn.addEventListener("click", () => {
+    saveGuessBtn.addEventListener("click", async () => {
       const idx = Number(guessPlayerSelect.value || 0);
       const day = Number(guessDaySelect.value || 1);
       const guess = (guessSelect.value || "").trim();
@@ -1375,7 +1356,7 @@
         delete cal.notes[day];
       }
 
-      saveData();
+      await saveStateToFirestore();
 
       const solution = appState.solutions[day] || "";
       let msg = "Tipp fuer Tag " + day + " gespeichert.";
@@ -1408,18 +1389,11 @@
       renderResults();
     });
 
-    // Codes zuruecksetzen
-    function resetCode(role, index) {
-      if (role === "admin") {
-        appState.pins.admin = null;
-        saveData();
-        resetCodeToast.textContent = "Admin-Code wurde zurueckgesetzt.";
-      } else if (role === "player") {
-        appState.pins.players[index] = null;
-        saveData();
-        const name = appState.players[index] || "Person " + (index + 1);
-        resetCodeToast.textContent = "Code fuer " + name + " wurde zurueckgesetzt.";
-      }
+    async function resetPlayerCode(index) {
+      appState.pins.players[index] = null;
+      await saveStateToFirestore();
+      const name = appState.players[index] || "Person " + (index + 1);
+      resetCodeToast.textContent = "Code fuer " + name + " wurde zurueckgesetzt.";
       resetCodeToast.style.display = "block";
       setTimeout(() => {
         resetCodeToast.style.display = "none";
@@ -1427,43 +1401,15 @@
       updateLoginView();
     }
 
-    resetAdminCodeBtn.addEventListener("click", () => resetCode("admin", null));
-    resetPlayer1CodeBtn.addEventListener("click", () => resetCode("player", 0));
-    resetPlayer2CodeBtn.addEventListener("click", () => resetCode("player", 1));
-    resetPlayer3CodeBtn.addEventListener("click", () => resetCode("player", 2));
+    resetPlayer1CodeBtn.addEventListener("click", () => resetPlayerCode(0));
+    resetPlayer2CodeBtn.addEventListener("click", () => resetPlayerCode(1));
+    resetPlayer3CodeBtn.addEventListener("click", () => resetPlayerCode(2));
 
-    // Login Events
-
-    adminSetPinBtn.addEventListener("click", () => {
-      const pin = adminNewPinInput.value.trim();
-      const confirmPin = adminNewPinConfirmInput.value.trim();
-      if (pin.length < 4) {
-        adminLoginToast.textContent = "Code sollte mindestens 4 Zeichen haben.";
-        adminLoginToast.style.display = "block";
-        return;
-      }
-      if (pin !== confirmPin) {
-        adminLoginToast.textContent = "Code und Bestaetigung stimmen nicht ueberein.";
-        adminLoginToast.style.display = "block";
-        return;
-      }
-      appState.pins.admin = pin;
-      saveData();
-      adminNewPinInput.value = "";
-      adminNewPinConfirmInput.value = "";
-      adminLoginToast.style.display = "none";
-      currentRole = { type: "admin" };
-      updateRoleUI();
-    });
+    // Login
 
     adminLoginBtn.addEventListener("click", () => {
       const pin = adminPinInput.value.trim();
-      if (!appState.pins.admin) {
-        adminLoginToast.textContent = "Fuer den Admin ist noch kein Code gesetzt.";
-        adminLoginToast.style.display = "block";
-        return;
-      }
-      if (pin === appState.pins.admin) {
+      if (pin === ADMIN_PASSWORD) {
         adminPinInput.value = "";
         adminLoginToast.style.display = "none";
         currentRole = { type: "admin" };
@@ -1481,7 +1427,7 @@
       });
     });
 
-    playerSetPinBtn.addEventListener("click", () => {
+    playerSetPinBtn.addEventListener("click", async () => {
       if (currentLoginPlayerIndex === null) return;
       const pin = playerNewPinInput.value.trim();
       const confirmPin = playerNewPinConfirmInput.value.trim();
@@ -1496,7 +1442,7 @@
         return;
       }
       appState.pins.players[currentLoginPlayerIndex] = pin;
-      saveData();
+      await saveStateToFirestore();
       const idx = currentLoginPlayerIndex;
       currentLoginPlayerIndex = null;
       playerLoginToast.style.display = "none";
@@ -1530,11 +1476,18 @@
       currentRole = null;
       currentLoginPlayerIndex = null;
       currentRoleBadge.classList.add("hidden");
-      loginOverlay.style.display = "flex";
+      loginOverlay.classList.remove("hidden");
       updateLoginView();
     });
 
-    function init() {
+    async function init() {
+      try {
+        appState = await loadStateFromFirestore();
+      } catch (e) {
+        console.error("Fehler beim Laden aus Firestore:", e);
+        alert("Fehler beim Laden der Daten aus Firestore. Bitte Konfiguration pruefen.");
+      }
+
       renderPlayerInputs();
       renderPlayerSelects();
       renderWhiskyListEditor();
@@ -1543,7 +1496,10 @@
       renderGuessOverview();
       renderGuessWhiskySelect();
       renderResults();
-      updateRoleUI();
+
+      loadingOverlay.style.display = "none";
+      loginOverlay.classList.remove("hidden");
+      updateLoginView();
     }
 
     init();
