@@ -1,0 +1,15 @@
+{
+  "name": "Whisky Adventskalender",
+  "short_name": "Whisky Advent",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#f97316",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

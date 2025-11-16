@@ -4,6 +4,14 @@
   <meta charset="UTF-8" />
   <title>Whisky Adventskalender</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- iOS / PWA Icon und Einstellungen -->
+  <link rel="apple-touch-icon" href="icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Whisky Advent">
+  <link rel="manifest" href="manifest.json">
+
   <style>
     :root {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -795,13 +803,13 @@
 
     // TODO: HIER deine eigene Firebase-Konfiguration einsetzen
     const firebaseConfig = {
-    apiKey: "AIzaSyBPWZ0xh9w6YsGhoOhJjD3OI6cSor1I8P0",
-  authDomain: "whiskyadventskalender-2025.firebaseapp.com",
-  projectId: "whiskyadventskalender-2025",
-  storageBucket: "whiskyadventskalender-2025.firebasestorage.app",
-  messagingSenderId: "513773042118",
-  appId: "1:513773042118:web:aa635c3df07376af3e5ac7"
-};
+      apiKey: "DEIN_API_KEY",
+      authDomain: "DEIN_PROJEKT_ID.firebaseapp.com",
+      projectId: "DEIN_PROJEKT_ID",
+      storageBucket: "DEIN_PROJEKT_ID.appspot.com",
+      messagingSenderId: "DEINE_SENDER_ID",
+      appId: "DEINE_APP_ID"
+    };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
