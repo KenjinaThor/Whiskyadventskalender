@@ -4,13 +4,25 @@
   <meta charset="UTF-8" />
   <title>Whisky Adventskalender</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#020617" />
+  <meta name="color-scheme" content="dark" />
 
-  <!-- iOS / PWA Icon und Einstellungen -->
+  <!-- Icons -->
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
   <link rel="apple-touch-icon" href="icon.png">
+
+  <!-- iOS / PWA Einstellungen -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Whisky Advent">
   <link rel="manifest" href="manifest.json">
+
+  <!-- Frühere Verbindung zu Firebase für schnelleres Laden -->
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="dns-prefetch" href="https://www.gstatic.com">
+  <link rel="dns-prefetch" href="https://firestore.googleapis.com">
 
   <style>
     :root {
@@ -140,6 +152,7 @@
     }
 
     input[type="text"],
+    input[type="number"],
     input[type="password"],
     select,
     textarea {
@@ -156,6 +169,7 @@
     }
 
     input[type="text"]:focus,
+    input[type="number"]:focus,
     input[type="password"]:focus,
     select:focus,
     textarea:focus {
@@ -351,6 +365,29 @@
       color: #fee2e2;
     }
 
+    /* Whisky-Tage: Karte pro Tag mit einem Unterformular je Person */
+    .whisky-day-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .whisky-subform {
+      border: 1px solid #1f2937;
+      border-radius: 10px;
+      padding: 8px 10px;
+      background: rgba(2, 6, 23, 0.6);
+    }
+
+    .whisky-subform.is-you {
+      border-color: #f97316;
+    }
+
+    .whisky-subform .login-section-title {
+      margin-top: 0;
+    }
+
     /* Login-Overlay */
     #loginOverlay {
       position: fixed;
@@ -445,7 +482,7 @@
   </style>
 </head>
 <body>
-  <!-- Loading Overlay fuer Firestore -->
+  <!-- Loading Overlay für Firestore -->
   <div id="loadingOverlay">Daten werden geladen ...</div>
 
   <!-- Login-Overlay -->
@@ -453,7 +490,7 @@
     <div id="loginCard">
       <h2>Anmeldung</h2>
       <div class="subtitle" style="margin-bottom: 10px;">
-        Bitte waehle, ob du als Administrator oder als eine der drei Personen arbeiten willst.
+        Bitte wähle, ob du als Administrator oder als eine der drei Personen arbeiten willst.
       </div>
 
       <div class="login-section">
@@ -486,13 +523,13 @@
         </div>
 
         <div id="playerLoginDetail" style="margin-top:10px; display:none;">
-          <div class="login-section-title" id="playerLoginTitle">Login fuer Teilnehmer</div>
+          <div class="login-section-title" id="playerLoginTitle">Login für Teilnehmer</div>
 
           <!-- Spieler: erster Login (Code setzen) -->
           <div id="playerFirstLogin">
             <label for="playerNewPinInput">Neuer Code</label>
             <input type="password" id="playerNewPinInput" placeholder="mindestens 4 Zeichen" />
-            <label for="playerNewPinConfirmInput" style="margin-top:6px;">Code bestaetigen</label>
+            <label for="playerNewPinConfirmInput" style="margin-top:6px;">Code bestätigen</label>
             <input type="password" id="playerNewPinConfirmInput" placeholder="noch einmal eingeben" />
             <button id="playerSetPinBtn" class="btn btn-primary" style="margin-top: 8px;">
               Code setzen und anmelden
@@ -513,8 +550,8 @@
       </div>
 
       <div class="login-footer">
-        Hinweis: Admin kann Namen, Whisky-Liste, Loesungen und Auswertung sehen. Teilnehmer koennen nur ihre eigenen
-        Tipps eingeben.
+        Hinweis: Admin kann Namen, alle Whisky-Tage und die Auswertung sehen. Teilnehmer erfassen die Whiskys für
+        ihre eigenen Tage und geben ihre Tipps ab.
       </div>
     </div>
   </div>
@@ -530,22 +567,22 @@
       <span class="logo-dot"></span>
     </h1>
     <div class="subtitle">
-      Fuer 3 Personen – Admin-Ansicht fuer Setup und Auswertung, Spieler-Ansicht fuer Tipps. Daten werden zentral in
-      Firebase Firestore gespeichert.
+      Für 3 Personen – Admin-Ansicht für Setup und Auswertung, Spieler-Ansicht für Whisky-Tage und Tipps. Daten
+      werden zentral in Firebase Firestore gespeichert.
     </div>
 
     <div class="tabs">
       <button class="tab-btn active" data-section="setup" id="tabSetup">
         Setup
-        <span class="badge">Personen & Loesungen</span>
+        <span class="badge">Personen & Codes</span>
       </button>
       <button class="tab-btn" data-section="whiskies" id="tabWhiskies">
-        Whiskys
-        <span class="badge">Auswahl (Dropdown)</span>
+        Whisky-Tage
+        <span class="badge">Name, Edition, Alter, Volumen</span>
       </button>
       <button class="tab-btn" data-section="guess" id="tabGuess">
         Tipp abgeben
-        <span class="badge">Tag fuer Tag</span>
+        <span class="badge">Tag für Tag</span>
       </button>
       <button class="tab-btn" data-section="results" id="tabResults">
         Auswertung
@@ -555,118 +592,65 @@
 
     <!-- SETUP -->
     <section id="setup" class="section active">
-      <div class="grid-2">
-        <div>
-          <h2>1. Personen festlegen</h2>
-          <div class="card">
-            <div class="card-header">
-              <div>Teilnehmer</div>
-              <div class="pill">genau 3 Personen</div>
-            </div>
-            <label for="player1">Person 1</label>
-            <input type="text" id="player1" placeholder="z. B. Kenji" />
-
-            <label for="player2" style="margin-top: 8px;">Person 2</label>
-            <input type="text" id="player2" placeholder="z. B. Yanick" />
-
-            <label for="player3" style="margin-top: 8px;">Person 3</label>
-            <input type="text" id="player3" placeholder="z. B. Gianluca" />
-
-            <button id="savePlayersBtn" class="btn btn-primary" style="margin-top: 10px;">
-              Personen speichern
-            </button>
-            <div class="hint">
-              Das machst du einmal. Die Namen erscheinen dann im Login, bei Tipps und in der Auswertung.
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <h2>2. Loesungen (fuer alle gleich)</h2>
-          <div class="card">
-            <div class="card-header">
-              <div>Loesungen pro Tag</div>
-              <div class="pill">gemeinsam fuer alle</div>
-            </div>
-            <div class="hint">
-              Hier traegst du ein, welcher Whisky an welchem Tag wirklich im Glas ist. Diese Loesung gilt fuer alle
-              Personen.
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card" style="margin-top: 14px;">
+      <h2>1. Personen festlegen</h2>
+      <div class="card">
         <div class="card-header">
-          <div>Loesungen fuer alle Personen</div>
-          <div class="pill">24 Tage</div>
+          <div>Teilnehmer</div>
+          <div class="pill">genau 3 Personen</div>
         </div>
-        <div class="scroll-container">
-          <table id="solutionTable">
-            <thead>
-              <tr>
-                <th style="width: 60px;">Tag</th>
-                <th>Whisky (aus Liste)</th>
-              </tr>
-            </thead>
-            <tbody>
-            </tbody>
-          </table>
-        </div>
-        <button id="saveSolutionsBtn" class="btn btn-primary" style="margin-top: 10px;">
-          Loesungen speichern
+        <label for="player1">Person 1</label>
+        <input type="text" id="player1" placeholder="z. B. Kenji" />
+
+        <label for="player2" style="margin-top: 8px;">Person 2</label>
+        <input type="text" id="player2" placeholder="z. B. Yanick" />
+
+        <label for="player3" style="margin-top: 8px;">Person 3</label>
+        <input type="text" id="player3" placeholder="z. B. Gianluca" />
+
+        <button id="savePlayersBtn" class="btn btn-primary" style="margin-top: 10px;">
+          Personen speichern
         </button>
-        <div id="solutionToast" class="toast toast-info" style="display: none;"></div>
+        <div class="hint">
+          Das machst du einmal. Die Namen erscheinen dann im Login, bei den Whisky-Tagen und in der Auswertung. Die
+          Reihenfolge bestimmt auch, wer an welchem Tag die Whiskys für alle einträgt (Tag 1 → Person 1, Tag 2 →
+          Person 2, Tag 3 → Person 3, Tag 4 → Person 1, ...).
+        </div>
       </div>
 
-      <div class="card" style="margin-top: 8px;">
+      <h2 style="margin-top: 18px;">2. Zugänge / Codes</h2>
+      <div class="card">
         <div class="card-header">
-          <div>Zugaenge / Codes</div>
-          <div class="pill">Codes fuer Teilnehmer</div>
+          <div>Zugänge / Codes</div>
+          <div class="pill">Codes für Teilnehmer</div>
         </div>
         <div class="flex" style="flex-wrap: wrap; gap:8px;">
           <button id="resetPlayer1CodeBtn" class="btn btn-outline btn-small">
-            Code fuer Person&nbsp;1 zuruecksetzen
+            Code für Person&nbsp;1 zurücksetzen
           </button>
           <button id="resetPlayer2CodeBtn" class="btn btn-outline btn-small">
-            Code fuer Person&nbsp;2 zuruecksetzen
+            Code für Person&nbsp;2 zurücksetzen
           </button>
           <button id="resetPlayer3CodeBtn" class="btn btn-outline btn-small">
-            Code fuer Person&nbsp;3 zuruecksetzen
+            Code für Person&nbsp;3 zurücksetzen
           </button>
         </div>
         <div id="resetCodeToast" class="toast toast-success" style="display:none;"></div>
         <div class="hint">
-          Beim Zuruecksetzen wird nur der Code geloescht. Alle Namen, Whisky-Daten, Bewertungen, Bemerkungen und Tipps
+          Beim Zurücksetzen wird nur der Code gelöscht. Alle Namen, Whisky-Tage, Bewertungen, Bemerkungen und Tipps
           bleiben in Firestore erhalten.
         </div>
       </div>
     </section>
 
-    <!-- WHISKY LIST -->
+    <!-- WHISKY-TAGE -->
     <section id="whiskies" class="section">
-      <h2>Whisky-Liste (fuer Dropdown)</h2>
-      <div class="card">
-        <div class="card-header">
-          <div>Auswahl verwalten</div>
-          <div class="pill">alphabetisch sortiert</div>
-        </div>
-        <label for="whiskyListInput">
-          Whiskys (ein Name pro Zeile)
-        </label>
-        <textarea
-          id="whiskyListInput"
-          placeholder="z. B.&#10Nicolas - Whisky 1&#10Yanick - Whisky 1&#10Gianluca - Whisky 1&#10..."
-        ></textarea>
-        <button id="saveWhiskyListBtn" class="btn btn-primary">
-          Whisky-Liste speichern
-        </button>
-        <div id="whiskyListToast" class="toast toast-info" style="display:none;"></div>
-        <div class="hint">
-          Beim Speichern werden leere Zeilen entfernt, Duplikate zusammengefasst und alles nach Name sortiert. Diese
-          Liste wird in Setup und beim Tipp als Dropdown verwendet.
-        </div>
+      <h2>Whisky-Tage</h2>
+      <div class="hint" style="margin-bottom: 6px;">
+        An jedem Tag befüllt eine Person die Whiskys für sich und die beiden anderen Teilnehmer – jeweils mit Name,
+        Edition, Alter und Volumen. Diese Angaben sind direkt die Lösung für diesen Tag, ein separater
+        Zwischenschritt entfällt.
       </div>
+      <div id="whiskyDaysContainer"></div>
     </section>
 
     <!-- GUESS -->
@@ -680,12 +664,12 @@
               <div class="pill">Tasting</div>
             </div>
             <div id="guessPlayerRow">
-              <label for="guessPlayerSelect">Fuer welchen Kalender?</label>
+              <label for="guessPlayerSelect">Für welchen Kalender?</label>
               <select id="guessPlayerSelect"></select>
             </div>
             <div id="guessPlayerInfo" class="hint hidden" style="margin-bottom: 6px;">
-              Du bist angemeldet als <span id="guessPlayerInfoName"></span>. Du gibst Tipps fuer deinen eigenen Kalender
-              ab.
+              Du bist angemeldet als <span id="guessPlayerInfoName"></span>. Du gibst Tipps für deinen eigenen
+              Kalender ab.
             </div>
 
             <label for="guessDaySelect" style="margin-top: 8px;">Tag</label>
@@ -717,9 +701,8 @@
             </button>
             <div id="guessToast" class="toast" style="display: none;"></div>
             <div class="hint">
-              Die Auswahl wird nach Besitzer (Nicolas / Yanick / Gianluca) pro Tag gefiltert.
-              Bereits von dir verwendete Whiskys sind rot markiert und mit
-              "(bereits ausgewaehlt)" gekennzeichnet.
+              Die Auswahl zeigt die für diesen Tag hinterlegten Whiskys. Bereits von dir verwendete Whiskys sind rot
+              markiert und mit "(bereits ausgewählt)" gekennzeichnet.
             </div>
           </div>
         </div>
@@ -728,7 +711,7 @@
           <div class="card">
             <div class="card-header">
               <div>Bereits abgegebene Tipps</div>
-              <div class="pill">uebersicht</div>
+              <div class="pill">Übersicht</div>
             </div>
             <div class="scroll-container">
               <table id="guessOverviewTable">
@@ -775,7 +758,7 @@
             <thead>
               <tr>
                 <th style="width: 60px;">Tag</th>
-                <th>Loesung</th>
+                <th>Lösung</th>
                 <th>Tipp</th>
                 <th style="width: 70px;">Bewertung</th>
                 <th>Bemerkung</th>
@@ -821,17 +804,61 @@
     function defaultState() {
       return {
         players: ["Person 1", "Person 2", "Person 3"],
+        // solutions[tag][personIndex] = { name, edition, age, volume }
         solutions: {},
         calendars: [
           { guesses: {}, ratings: {}, notes: {} },
           { guesses: {}, ratings: {}, notes: {} },
           { guesses: {}, ratings: {}, notes: {} }
         ],
-        whiskyList: [],
         pins: {
           players: [null, null, null]
         }
       };
+    }
+
+    function emptyWhiskyEntry() {
+      return { name: "", edition: "", age: "", volume: "" };
+    }
+
+    // Wandelt einen gespeicherten Eintrag (altes Format: reiner String,
+    // neues Format: { name, edition, age, volume }) in eine einheitliche Form um.
+    function normalizeWhiskyEntry(raw) {
+      if (typeof raw === "string") {
+        const name = raw.trim();
+        return name ? { name, edition: "", age: "", volume: "" } : emptyWhiskyEntry();
+      }
+      if (raw && typeof raw === "object") {
+        return {
+          name: typeof raw.name === "string" ? raw.name : "",
+          edition: typeof raw.edition === "string" ? raw.edition : "",
+          age: raw.age === undefined || raw.age === null ? "" : String(raw.age),
+          volume: typeof raw.volume === "string" ? raw.volume : (raw.volume == null ? "" : String(raw.volume))
+        };
+      }
+      return emptyWhiskyEntry();
+    }
+
+    function normalizeSolutions(raw) {
+      const solutions = {};
+      if (!raw || typeof raw !== "object") return solutions;
+      Object.keys(raw).forEach((day) => {
+        const value = raw[day];
+        if (typeof value === "string") {
+          // Altes Format: eine gemeinsame Lösung für alle 3 Personen
+          const entry = normalizeWhiskyEntry(value);
+          solutions[day] = { 0: entry, 1: entry, 2: entry };
+        } else if (value && typeof value === "object") {
+          const dayEntry = {};
+          [0, 1, 2].forEach((pIdx) => {
+            if (value[pIdx] !== undefined) {
+              dayEntry[pIdx] = normalizeWhiskyEntry(value[pIdx]);
+            }
+          });
+          solutions[day] = dayEntry;
+        }
+      });
+      return solutions;
     }
 
     function normalizeState(raw) {
@@ -839,18 +866,13 @@
       if (raw && Array.isArray(raw.players) && raw.players.length === 3) {
         base.players = raw.players;
       }
-      if (raw && raw.solutions && typeof raw.solutions === "object") {
-        base.solutions = raw.solutions;
-      }
+      base.solutions = normalizeSolutions(raw && raw.solutions);
       if (raw && Array.isArray(raw.calendars) && raw.calendars.length === 3) {
         base.calendars = raw.calendars.map((c) => ({
           guesses: c && c.guesses ? c.guesses : {},
           ratings: c && c.ratings ? c.ratings : {},
           notes: c && c.notes ? c.notes : {}
         }));
-      }
-      if (raw && Array.isArray(raw.whiskyList)) {
-        base.whiskyList = raw.whiskyList;
       }
       if (raw && raw.pins && Array.isArray(raw.pins.players) && raw.pins.players.length === 3) {
         base.pins.players = raw.pins.players;
@@ -876,27 +898,41 @@
 
     let appState = defaultState();
 
-    // Zuordnung: welcher Besitzer-Name fuer welchen Tag?
-    function getOwnerSubstringForDay(day) {
-      // day: 1..24
-      const mod = (day - 1) % 3;
-      if (mod === 0) return "Nicolas";   // 1,4,7,10,13,16,19,22
-      if (mod === 1) return "Yanick";    // 2,5,8,11,14,17,20,23
-      return "Gianluca";                 // 3,6,9,12,15,18,21,24
+    // Wer ist an einem Tag mit dem Befüllen aller drei Kalender dran?
+    // Tag 1 -> Person 0, Tag 2 -> Person 1, Tag 3 -> Person 2, Tag 4 -> Person 0, ...
+    function getOwnerIndexForDay(day) {
+      return (day - 1) % 3;
     }
 
-    // Gefilterte Whisky-Liste fuer einen bestimmten Tag
-    function getSortedWhiskyList() {
-      const list = Array.isArray(appState.whiskyList) ? [...appState.whiskyList] : [];
-      list.sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
-      return list;
+    function getSolutionEntry(day, playerIdx) {
+      const dayEntry = appState.solutions[day];
+      if (dayEntry && dayEntry[playerIdx]) return dayEntry[playerIdx];
+      return emptyWhiskyEntry();
     }
 
-    function getWhiskyListForDay(day) {
-      const baseList = getSortedWhiskyList();
-      const ownerSub = getOwnerSubstringForDay(day);
-      const filtered = baseList.filter((name) => name.includes(ownerSub));
-      return filtered;
+    function formatWhiskyEntry(entry) {
+      if (!entry || !entry.name) return "";
+      const details = [];
+      if (entry.edition) details.push(entry.edition);
+      if (entry.age) details.push(entry.age + " Jahre");
+      if (entry.volume) details.push(entry.volume);
+      return details.length ? entry.name + " (" + details.join(", ") + ")" : entry.name;
+    }
+
+    // Kandidaten-Namen für den Tipp an einem Tag: alle Whiskynamen, die die für
+    // diesen Tag zuständige Person über den ganzen Kalender hinweg als Lösung
+    // erfasst hat (für sich selbst und die beiden anderen Teilnehmer).
+    function getCandidateNamesForDay(day) {
+      const ownerIdx = getOwnerIndexForDay(day);
+      const names = new Set();
+      for (let d = 1; d <= 24; d++) {
+        if (getOwnerIndexForDay(d) !== ownerIdx) continue;
+        for (let p = 0; p < 3; p++) {
+          const entry = getSolutionEntry(d, p);
+          if (entry.name) names.add(entry.name);
+        }
+      }
+      return Array.from(names).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
     }
 
     // UI-Referenzen
@@ -914,13 +950,7 @@
     ];
     const savePlayersBtn = document.getElementById("savePlayersBtn");
 
-    const solutionTableBody = document.querySelector("#solutionTable tbody");
-    const saveSolutionsBtn = document.getElementById("saveSolutionsBtn");
-    const solutionToast = document.getElementById("solutionToast");
-
-    const whiskyListInput = document.getElementById("whiskyListInput");
-    const saveWhiskyListBtn = document.getElementById("saveWhiskyListBtn");
-    const whiskyListToast = document.getElementById("whiskyListToast");
+    const whiskyDaysContainer = document.getElementById("whiskyDaysContainer");
 
     const guessPlayerSelect = document.getElementById("guessPlayerSelect");
     const guessPlayerRow = document.getElementById("guessPlayerRow");
@@ -990,6 +1020,17 @@
       });
     });
 
+    // Verhindert Doppel-Klicks während eines laufenden Firestore-Schreibvorgangs
+    async function withButtonGuard(btn, handler) {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      try {
+        await handler();
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
     function renderPlayerInputs() {
       appState.players.forEach((name, idx) => {
         playerInputs[idx].value = name;
@@ -1022,48 +1063,159 @@
       }
     }
 
-    function renderSolutionTable() {
-      solutionTableBody.innerHTML = "";
-
+    // Welche Tage darf die aktuell angemeldete Rolle befüllen?
+    function getEditableDaysForCurrentRole() {
+      if (!currentRole) return [];
+      if (currentRole.type === "admin") {
+        return Array.from({ length: 24 }, (_, i) => i + 1);
+      }
+      const idx = currentRole.index;
+      const days = [];
       for (let day = 1; day <= 24; day++) {
-        const tr = document.createElement("tr");
+        if (getOwnerIndexForDay(day) === idx) days.push(day);
+      }
+      return days;
+    }
 
-        const tdDay = document.createElement("td");
-        tdDay.textContent = String(day).padStart(2, "0");
-        tr.appendChild(tdDay);
+    function buildWhiskySubform(day, playerIdx) {
+      const entry = getSolutionEntry(day, playerIdx);
+      const playerName = appState.players[playerIdx] || "Person " + (playerIdx + 1);
+      const isYou = currentRole && currentRole.type === "player" && currentRole.index === playerIdx;
 
-        const tdName = document.createElement("td");
-        const select = document.createElement("select");
-        select.id = "solution-day-" + day;
+      const sub = document.createElement("div");
+      sub.className = "whisky-subform" + (isYou ? " is-you" : "");
 
-        const listForDay = getWhiskyListForDay(day);
+      const title = document.createElement("div");
+      title.className = "login-section-title";
+      title.textContent = playerName + (isYou ? " (du)" : "");
+      sub.appendChild(title);
 
-        const emptyOpt = document.createElement("option");
-        emptyOpt.value = "";
-        if (listForDay.length === 0) {
-          emptyOpt.textContent = "-- keine passenden Whiskys (Name im Text fehlt) --";
-        } else {
-          emptyOpt.textContent = "-- Whisky waehlen --";
-        }
-        select.appendChild(emptyOpt);
+      const nameInput = document.createElement("input");
+      nameInput.type = "text";
+      nameInput.placeholder = "z. B. Lagavulin 16";
+      nameInput.value = entry.name;
+      const nameLabel = document.createElement("label");
+      nameLabel.textContent = "Name";
+      sub.appendChild(nameLabel);
+      sub.appendChild(nameInput);
 
-        listForDay.forEach((name) => {
-          const opt = document.createElement("option");
-          opt.value = name;
-          opt.textContent = name;
-          select.appendChild(opt);
+      const editionInput = document.createElement("input");
+      editionInput.type = "text";
+      editionInput.placeholder = "z. B. Distillers Edition";
+      editionInput.value = entry.edition;
+      const editionLabel = document.createElement("label");
+      editionLabel.style.marginTop = "6px";
+      editionLabel.textContent = "Edition";
+      sub.appendChild(editionLabel);
+      sub.appendChild(editionInput);
+
+      const ageInput = document.createElement("input");
+      ageInput.type = "number";
+      ageInput.min = "0";
+      ageInput.max = "99";
+      ageInput.placeholder = "z. B. 12";
+      ageInput.value = entry.age;
+      const ageLabel = document.createElement("label");
+      ageLabel.style.marginTop = "6px";
+      ageLabel.textContent = "Alter (Jahre)";
+      sub.appendChild(ageLabel);
+      sub.appendChild(ageInput);
+
+      const volumeInput = document.createElement("input");
+      volumeInput.type = "text";
+      volumeInput.placeholder = "z. B. 700 ml";
+      volumeInput.value = entry.volume;
+      const volumeLabel = document.createElement("label");
+      volumeLabel.style.marginTop = "6px";
+      volumeLabel.textContent = "Volumen";
+      sub.appendChild(volumeLabel);
+      sub.appendChild(volumeInput);
+
+      return { sub, nameInput, editionInput, ageInput, volumeInput };
+    }
+
+    function renderWhiskyDaysSection() {
+      whiskyDaysContainer.innerHTML = "";
+      const days = getEditableDaysForCurrentRole();
+
+      if (days.length === 0) {
+        const hint = document.createElement("div");
+        hint.className = "hint";
+        hint.textContent = "Für dich sind aktuell keine Tage zum Erfassen vorgesehen.";
+        whiskyDaysContainer.appendChild(hint);
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+
+      days.forEach((day) => {
+        const ownerIdx = getOwnerIndexForDay(day);
+        const ownerName = appState.players[ownerIdx] || "Person " + (ownerIdx + 1);
+
+        const card = document.createElement("div");
+        card.className = "card";
+
+        const header = document.createElement("div");
+        header.className = "card-header";
+        const title = document.createElement("div");
+        title.textContent = "Tag " + String(day).padStart(2, "0");
+        const pill = document.createElement("div");
+        pill.className = "pill";
+        pill.textContent = ownerName + " ist dran";
+        header.appendChild(title);
+        header.appendChild(pill);
+        card.appendChild(header);
+
+        const grid = document.createElement("div");
+        grid.className = "whisky-day-grid";
+
+        const fieldRefs = appState.players.map((_, playerIdx) => {
+          const built = buildWhiskySubform(day, playerIdx);
+          grid.appendChild(built.sub);
+          return built;
         });
 
-        const current = appState.solutions[day] || "";
-        if (current) {
-          select.value = current;
-        }
+        card.appendChild(grid);
 
-        tdName.appendChild(select);
-        tr.appendChild(tdName);
+        const saveBtn = document.createElement("button");
+        saveBtn.className = "btn btn-primary btn-small";
+        saveBtn.style.marginTop = "8px";
+        saveBtn.textContent = "Tag " + day + " speichern";
 
-        solutionTableBody.appendChild(tr);
-      }
+        const toast = document.createElement("div");
+        toast.className = "toast toast-success";
+        toast.style.display = "none";
+
+        saveBtn.addEventListener("click", () => withButtonGuard(saveBtn, async () => {
+          const dayEntry = {};
+          fieldRefs.forEach((refs, playerIdx) => {
+            dayEntry[playerIdx] = {
+              name: refs.nameInput.value.trim(),
+              edition: refs.editionInput.value.trim(),
+              age: refs.ageInput.value.trim(),
+              volume: refs.volumeInput.value.trim()
+            };
+          });
+          appState.solutions[day] = dayEntry;
+          await saveStateToFirestore();
+
+          toast.textContent = "Tag " + day + " gespeichert.";
+          toast.style.display = "block";
+          setTimeout(() => {
+            toast.style.display = "none";
+          }, 2000);
+
+          renderGuessWhiskySelect();
+          renderResults();
+        }));
+
+        card.appendChild(saveBtn);
+        card.appendChild(toast);
+
+        fragment.appendChild(card);
+      });
+
+      whiskyDaysContainer.appendChild(fragment);
     }
 
     function renderGuessDaySelect() {
@@ -1076,18 +1228,16 @@
       }
     }
 
-    // Dropdown fuer Tippabgabe: Whiskys nach Tag filtern und bereits verwendete markieren
+    // Dropdown für Tippabgabe: Whiskys nach Tag filtern und bereits verwendete markieren
     function populateWhiskySelect(selectElement, currentValue, day, usedSet) {
-      const list = getWhiskyListForDay(day);
+      const list = getCandidateNamesForDay(day);
       selectElement.innerHTML = "";
 
       const emptyOpt = document.createElement("option");
       emptyOpt.value = "";
-      if (list.length === 0) {
-        emptyOpt.textContent = "-- keine passenden Whiskys (Name im Text fehlt) --";
-      } else {
-        emptyOpt.textContent = "-- Whisky waehlen --";
-      }
+      emptyOpt.textContent = list.length === 0
+        ? "-- noch keine Whiskys für diesen Tag erfasst --"
+        : "-- Whisky wählen --";
       selectElement.appendChild(emptyOpt);
 
       list.forEach((name) => {
@@ -1096,7 +1246,7 @@
 
         if (usedSet && usedSet.has(name)) {
           opt.classList.add("used-option");
-          opt.textContent = name + " (bereits ausgewaehlt)";
+          opt.textContent = name + " (bereits ausgewählt)";
         } else {
           opt.textContent = name;
         }
@@ -1139,6 +1289,7 @@
       const cal = appState.calendars[idx];
 
       guessOverviewTableBody.innerHTML = "";
+      const fragment = document.createDocumentFragment();
       for (let day = 1; day <= 24; day++) {
         const tr = document.createElement("tr");
         const tdDay = document.createElement("td");
@@ -1157,8 +1308,9 @@
         tr.appendChild(tdGuess);
         tr.appendChild(tdRating);
         tr.appendChild(tdNote);
-        guessOverviewTableBody.appendChild(tr);
+        fragment.appendChild(tr);
       }
+      guessOverviewTableBody.appendChild(fragment);
     }
 
     function renderResults() {
@@ -1170,19 +1322,21 @@
       let totalWithSolution = 0;
 
       resultsTableBody.innerHTML = "";
+      const fragment = document.createDocumentFragment();
 
       for (let day = 1; day <= 24; day++) {
-        const solution = appState.solutions[day] || "";
+        const solutionEntry = getSolutionEntry(day, idx);
+        const solutionName = solutionEntry.name || "";
         const guess = (cal.guesses && cal.guesses[day]) || "";
         const rating = (cal.ratings && cal.ratings[day]) || "";
         const note = (cal.notes && cal.notes[day]) || "";
 
-        if (solution) {
+        if (solutionName) {
           totalWithSolution++;
         }
 
         let isCorrect = false;
-        if (solution && guess && solution.trim() === guess.trim()) {
+        if (solutionName && guess && solutionName.trim() === guess.trim()) {
           isCorrect = true;
           correct++;
         }
@@ -1194,7 +1348,7 @@
         tr.appendChild(tdDay);
 
         const tdSolution = document.createElement("td");
-        tdSolution.textContent = solution || "-";
+        tdSolution.textContent = solutionName ? formatWhiskyEntry(solutionEntry) : "-";
         tr.appendChild(tdSolution);
 
         const tdGuess = document.createElement("td");
@@ -1210,11 +1364,11 @@
         tr.appendChild(tdNote);
 
         const tdResult = document.createElement("td");
-        if (!solution && !guess) {
+        if (!solutionName && !guess) {
           tdResult.innerHTML = '<span class="tag">keine Daten</span>';
-        } else if (!solution && guess) {
-          tdResult.innerHTML = '<span class="tag tag-error">keine Loesung gepflegt</span>';
-        } else if (solution && !guess) {
+        } else if (!solutionName && guess) {
+          tdResult.innerHTML = '<span class="tag tag-error">keine Lösung gepflegt</span>';
+        } else if (solutionName && !guess) {
           tdResult.innerHTML = '<span class="tag">kein Tipp</span>';
         } else {
           if (isCorrect) {
@@ -1225,17 +1379,14 @@
         }
 
         tr.appendChild(tdResult);
-        resultsTableBody.appendChild(tr);
+        fragment.appendChild(tr);
       }
+
+      resultsTableBody.appendChild(fragment);
 
       const denominator = totalWithSolution || 24;
       scoreSummary.innerHTML =
         "Richtige Tipps: <strong>" + correct + " / " + denominator + "</strong>";
-    }
-
-    function renderWhiskyListEditor() {
-      const list = getSortedWhiskyList();
-      whiskyListInput.value = list.join("\n");
     }
 
     function updateLoginView() {
@@ -1244,7 +1395,7 @@
       } else {
         const idx = currentLoginPlayerIndex;
         const name = appState.players[idx] || "Teilnehmer " + (idx + 1);
-        playerLoginTitle.textContent = "Login fuer " + name;
+        playerLoginTitle.textContent = "Login für " + name;
         playerLoginDetail.style.display = "block";
 
         const hasPlayerPin =
@@ -1298,7 +1449,7 @@
         currentRoleName.textContent = name;
 
         tabSetup.classList.add("hidden");
-        tabWhiskies.classList.add("hidden");
+        tabWhiskies.classList.remove("hidden");
         tabResults.classList.add("hidden");
 
         switchTab("guess");
@@ -1312,11 +1463,13 @@
         renderGuessOverview();
         renderGuessWhiskySelect();
       }
+
+      renderWhiskyDaysSection();
     }
 
     // Events
 
-    savePlayersBtn.addEventListener("click", async () => {
+    savePlayersBtn.addEventListener("click", () => withButtonGuard(savePlayersBtn, async () => {
       const names = playerInputs.map((inp, idx) => {
         const v = inp.value.trim();
         return v || "Person " + (idx + 1);
@@ -1328,50 +1481,8 @@
       renderResults();
       renderGuessWhiskySelect();
       renderPlayerInputs();
-    });
-
-    saveSolutionsBtn.addEventListener("click", async () => {
-      for (let day = 1; day <= 24; day++) {
-        const select = document.getElementById("solution-day-" + day);
-        if (select) {
-          const v = select.value.trim();
-          if (v) {
-            appState.solutions[day] = v;
-          } else {
-            delete appState.solutions[day];
-          }
-        }
-      }
-      await saveStateToFirestore();
-      solutionToast.textContent = "Loesungen gespeichert.";
-      solutionToast.className = "toast toast-success";
-      solutionToast.style.display = "block";
-      setTimeout(() => {
-        solutionToast.style.display = "none";
-      }, 2000);
-      renderResults();
-    });
-
-    saveWhiskyListBtn.addEventListener("click", async () => {
-      const raw = whiskyListInput.value.split("\n");
-      const cleaned = raw
-        .map((l) => l.trim())
-        .filter((l) => l.length > 0);
-      const unique = Array.from(new Set(cleaned));
-      unique.sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
-      appState.whiskyList = unique;
-      await saveStateToFirestore();
-
-      whiskyListToast.textContent = "Whisky-Liste gespeichert (" + unique.length + " Eintraege).";
-      whiskyListToast.className = "toast toast-success";
-      whiskyListToast.style.display = "block";
-      setTimeout(() => {
-        whiskyListToast.style.display = "none";
-      }, 2000);
-
-      renderSolutionTable();
-      renderGuessWhiskySelect();
-    });
+      renderWhiskyDaysSection();
+    }));
 
     guessPlayerSelect.addEventListener("change", () => {
       renderGuessOverview();
@@ -1384,7 +1495,7 @@
       guessToast.style.display = "none";
     });
 
-    saveGuessBtn.addEventListener("click", async () => {
+    saveGuessBtn.addEventListener("click", () => withButtonGuard(saveGuessBtn, async () => {
       const idx = Number(guessPlayerSelect.value || 0);
       const day = Number(guessDaySelect.value || 1);
       const guess = (guessSelect.value || "").trim();
@@ -1392,7 +1503,7 @@
       const noteValue = guessNoteInput.value.trim();
 
       if (!guess) {
-        guessToast.textContent = "Bitte einen Whisky auswaehlen.";
+        guessToast.textContent = "Bitte einen Whisky auswählen.";
         guessToast.className = "toast toast-error";
         guessToast.style.display = "block";
         return;
@@ -1416,19 +1527,19 @@
 
       await saveStateToFirestore();
 
-      const solution = appState.solutions[day] || "";
-      let msg = "Tipp fuer Tag " + day + " gespeichert.";
+      const solutionName = getSolutionEntry(day, idx).name || "";
+      let msg = "Tipp für Tag " + day + " gespeichert.";
       let cls = "toast toast-success";
 
-      if (solution) {
-        if (solution.trim() === guess.trim()) {
+      if (solutionName) {
+        if (solutionName.trim() === guess.trim()) {
           msg += " (richtig)";
         } else {
-          msg += " (falsch – Loesung wird nur in der Auswertung angezeigt).";
+          msg += " (falsch – Lösung wird nur in der Auswertung angezeigt).";
           cls = "toast toast-info";
         }
       } else {
-        msg += " (keine Loesung hinterlegt, Auswertung spaeter moeglich).";
+        msg += " (keine Lösung hinterlegt, Auswertung später möglich).";
         cls = "toast toast-info";
       }
 
@@ -1439,7 +1550,7 @@
       renderGuessOverview();
       renderGuessWhiskySelect();
       renderResults();
-    });
+    }));
 
     resultsPlayerSelect.addEventListener("change", () => {
       renderResults();
@@ -1452,7 +1563,7 @@
       appState.pins.players[index] = null;
       await saveStateToFirestore();
       const name = appState.players[index] || "Person " + (index + 1);
-      resetCodeToast.textContent = "Code fuer " + name + " wurde zurueckgesetzt.";
+      resetCodeToast.textContent = "Code für " + name + " wurde zurückgesetzt.";
       resetCodeToast.style.display = "block";
       setTimeout(() => {
         resetCodeToast.style.display = "none";
@@ -1496,7 +1607,7 @@
         return;
       }
       if (pin !== confirmPin) {
-        playerLoginToast.textContent = "Code und Bestaetigung stimmen nicht ueberein.";
+        playerLoginToast.textContent = "Code und Bestätigung stimmen nicht überein.";
         playerLoginToast.style.display = "block";
         return;
       }
@@ -1515,7 +1626,7 @@
       const pin = playerPinInput.value.trim();
       const expected = appState.pins.players[idx];
       if (!expected) {
-        playerLoginToast.textContent = "Fuer diese Person ist noch kein Code gesetzt.";
+        playerLoginToast.textContent = "Für diese Person ist noch kein Code gesetzt.";
         playerLoginToast.style.display = "block";
         return;
       }
@@ -1544,13 +1655,11 @@
         appState = await loadStateFromFirestore();
       } catch (e) {
         console.error("Fehler beim Laden aus Firestore:", e);
-        alert("Fehler beim Laden der Daten aus Firestore. Bitte Konfiguration pruefen.");
+        alert("Fehler beim Laden der Daten aus Firestore. Bitte Konfiguration prüfen.");
       }
 
       renderPlayerInputs();
       renderPlayerSelects();
-      renderWhiskyListEditor();
-      renderSolutionTable();
       renderGuessDaySelect();
       renderGuessOverview();
       renderGuessWhiskySelect();
