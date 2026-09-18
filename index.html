@@ -398,6 +398,39 @@
       margin-top: 0;
     }
 
+    /* Autofill-Vorschlagsliste unter dem Namensfeld */
+    .autocomplete-wrap {
+      position: relative;
+    }
+
+    .autocomplete-list {
+      position: absolute;
+      z-index: 30;
+      top: 100%;
+      left: 0;
+      right: 0;
+      margin: 2px 0 0;
+      padding: 4px;
+      list-style: none;
+      background: #0f172a;
+      border: 1px solid #374151;
+      border-radius: 8px;
+      max-height: 190px;
+      overflow-y: auto;
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
+    }
+
+    .autocomplete-item {
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .autocomplete-item:hover {
+      background: rgba(249, 115, 22, 0.18);
+    }
+
     /* Login-Overlay */
     #loginOverlay {
       position: fixed;
@@ -773,7 +806,8 @@
       <div class="hint" style="margin-bottom: 6px;">
         An jedem Tag befüllt eine Person die Whiskys für sich und die beiden anderen Teilnehmer – jeweils mit Name,
         Edition, Alter und Volumen. Diese Angaben sind direkt die Lösung für diesen Tag, ein separater
-        Zwischenschritt entfällt.
+        Zwischenschritt entfällt. Beim Tippen im Namensfeld erscheinen automatisch Vorschläge aus einer
+        hinterlegten Whisky-Datenbank – bei Auswahl werden Edition/Alter/Volumen wo bekannt mit ausgefüllt.
       </div>
       <div id="nietenContainer"></div>
       <div id="whiskyDaysContainer"></div>
@@ -1172,11 +1206,15 @@
       const nameInput = document.createElement("input");
       nameInput.type = "text";
       nameInput.placeholder = "z. B. Lagavulin 16";
+      nameInput.autocomplete = "off";
       nameInput.value = entry.name;
       const nameLabel = document.createElement("label");
       nameLabel.textContent = "Name";
       sub.appendChild(nameLabel);
-      sub.appendChild(nameInput);
+      const nameWrap = document.createElement("div");
+      nameWrap.className = "autocomplete-wrap";
+      nameWrap.appendChild(nameInput);
+      sub.appendChild(nameWrap);
 
       const editionInput = document.createElement("input");
       editionInput.type = "text";
@@ -1210,7 +1248,65 @@
       sub.appendChild(volumeLabel);
       sub.appendChild(volumeInput);
 
+      attachWhiskyAutocomplete(nameWrap, nameInput, editionInput, ageInput, volumeInput);
+
       return { sub, nameInput, editionInput, ageInput, volumeInput };
+    }
+
+    // Autofill: Vorschlagsliste unter dem Namensfeld, aus whisky-database.json.
+    // Beim Auswaehlen eines Vorschlags werden Edition/Alter/Volumen automatisch
+    // uebernommen (nur dort, wo die Datenbank tatsaechlich einen Wert hat).
+    let whiskyReferenceDb = [];
+
+    function attachWhiskyAutocomplete(wrapEl, nameInput, editionInput, ageInput, volumeInput) {
+      const list = document.createElement("ul");
+      list.className = "autocomplete-list hidden";
+      wrapEl.appendChild(list);
+
+      function hideList() {
+        list.classList.add("hidden");
+        list.innerHTML = "";
+      }
+
+      function showMatches() {
+        const query = nameInput.value.trim().toLocaleLowerCase("de");
+        list.innerHTML = "";
+        if (query.length < 2 || whiskyReferenceDb.length === 0) {
+          hideList();
+          return;
+        }
+        const matches = whiskyReferenceDb
+          .filter((item) => item.name.toLocaleLowerCase("de").includes(query))
+          .slice(0, 8);
+        if (matches.length === 0) {
+          hideList();
+          return;
+        }
+        matches.forEach((item) => {
+          const li = document.createElement("li");
+          li.className = "autocomplete-item";
+          li.textContent = item.name;
+          // mousedown statt click: feuert vor dem blur-Event des Inputs
+          li.addEventListener("mousedown", (event) => {
+            event.preventDefault();
+            nameInput.value = item.name;
+            if (item.edition) editionInput.value = item.edition;
+            if (item.age) ageInput.value = item.age;
+            if (item.volume) volumeInput.value = item.volume;
+            hideList();
+          });
+          list.appendChild(li);
+        });
+        list.classList.remove("hidden");
+      }
+
+      nameInput.addEventListener("input", showMatches);
+      nameInput.addEventListener("focus", showMatches);
+      nameInput.addEventListener("blur", () => {
+        // Verzoegert schliessen, damit ein mousedown auf einen Vorschlag
+        // (v.a. bei Touch-Tap auf iPad) noch verarbeitet werden kann.
+        setTimeout(hideList, 150);
+      });
     }
 
     function buildWhiskySubform(day, playerIdx) {
@@ -1874,6 +1970,20 @@
       updateLoginView();
     });
 
+    async function loadWhiskyReferenceDb() {
+      try {
+        const res = await fetch("whisky-database.json");
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          whiskyReferenceDb = data.filter((item) => item && typeof item.name === "string" && item.name);
+        }
+      } catch (e) {
+        // Autofill ist ein Komfortfeature - ohne Datenbank bleiben die Felder
+        // einfach normale Texteingaben.
+        console.warn("Whisky-Datenbank fuer Autofill konnte nicht geladen werden:", e);
+      }
+    }
+
     async function init() {
       try {
         appState = await loadStateFromFirestore();
@@ -1881,6 +1991,8 @@
         console.error("Fehler beim Laden aus Firestore:", e);
         alert("Fehler beim Laden der Daten aus Firestore. Bitte Konfiguration prüfen.");
       }
+
+      await loadWhiskyReferenceDb();
 
       renderPlayerInputs();
       renderPlayerSelects();
