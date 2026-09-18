@@ -649,10 +649,12 @@
         <div id="addPlayerToast" class="toast toast-success" style="display:none;"></div>
 
         <div class="hint">
-          Die Namen erscheinen im Login, beim Whisky erfassen und in der Auswertung. Die Tage werden reihum anhand
-          der Anzahl Teilnehmer eingeteilt (Tag 1 → erste Person, Tag 2 → zweite Person, ..., dann wieder von vorn).
-          Achtung: Neue Personen hinzuzufügen ändert diese Tageszuteilung für den ganzen Kalender – am besten also
-          erledigen, bevor Whiskys erfasst werden.
+          Die Namen erscheinen im Login, beim Whisky erfassen und in der Auswertung. Mit ↑/↓ verschiebst du die
+          Reihenfolge, mit "Entfernen" löschst du eine Person komplett (inklusive ihrer Whisky-Einträge, Tipps,
+          Nieten und Freigabe). Die Tage werden reihum anhand der Anzahl und Reihenfolge der Teilnehmer eingeteilt
+          (Tag 1 → erste Person, Tag 2 → zweite Person, ..., dann wieder von vorn). Achtung: Hinzufügen, Verschieben
+          oder Entfernen ändert diese Tageszuteilung für den ganzen Kalender – am besten also erledigen, bevor
+          Whiskys erfasst werden.
         </div>
       </div>
 
@@ -1208,23 +1210,136 @@
     function renderPlayerInputs() {
       playerInputsContainer.innerHTML = "";
       const fragment = document.createDocumentFragment();
+      const count = appState.players.length;
+
       appState.players.forEach((name, idx) => {
+        const row = document.createElement("div");
+        row.className = "flex";
+        row.style.alignItems = "flex-end";
+        row.style.gap = "6px";
+        if (idx > 0) row.style.marginTop = "8px";
+
+        const fieldWrap = document.createElement("div");
+        fieldWrap.className = "flex-grow";
         const label = document.createElement("label");
         label.textContent = "Person " + (idx + 1);
-        if (idx > 0) label.style.marginTop = "8px";
-
         const input = document.createElement("input");
         input.type = "text";
         input.value = name;
         input.placeholder = "Name";
+        fieldWrap.appendChild(label);
+        fieldWrap.appendChild(input);
+        row.appendChild(fieldWrap);
 
-        fragment.appendChild(label);
-        fragment.appendChild(input);
+        const upBtn = document.createElement("button");
+        upBtn.type = "button";
+        upBtn.className = "btn btn-outline btn-small";
+        upBtn.textContent = "↑";
+        upBtn.title = "Nach oben verschieben";
+        upBtn.disabled = idx === 0;
+        upBtn.addEventListener("click", () => withButtonGuard(upBtn, () => movePlayerAndSave(idx, -1)));
+        row.appendChild(upBtn);
+
+        const downBtn = document.createElement("button");
+        downBtn.type = "button";
+        downBtn.className = "btn btn-outline btn-small";
+        downBtn.textContent = "↓";
+        downBtn.title = "Nach unten verschieben";
+        downBtn.disabled = idx === count - 1;
+        downBtn.addEventListener("click", () => withButtonGuard(downBtn, () => movePlayerAndSave(idx, 1)));
+        row.appendChild(downBtn);
+
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "btn btn-danger btn-small";
+        removeBtn.textContent = "Entfernen";
+        removeBtn.title = "Person entfernen";
+        removeBtn.disabled = count <= 1;
+        removeBtn.addEventListener("click", () => withButtonGuard(removeBtn, () => removePlayerAndSave(idx)));
+        row.appendChild(removeBtn);
+
+        fragment.appendChild(row);
       });
       playerInputsContainer.appendChild(fragment);
 
-      const count = appState.players.length;
       playerCountPill.textContent = count + (count === 1 ? " Person" : " Personen");
+    }
+
+    // Helfer, um Array-Index-basierte Daten (Kalender/Nieten/Freigaben/Loesungen)
+    // konsistent zu halten, wenn Personen verschoben oder entfernt werden.
+    function swapArrayIndex(arr, idxA, idxB) {
+      const tmp = arr[idxA];
+      arr[idxA] = arr[idxB];
+      arr[idxB] = tmp;
+    }
+
+    function swapKeyedIndex(obj, idxA, idxB) {
+      const tmp = obj[idxA];
+      obj[idxA] = obj[idxB];
+      obj[idxB] = tmp;
+    }
+
+    function removeKeyedIndex(obj, removedIdx) {
+      const result = {};
+      Object.keys(obj || {}).forEach((keyStr) => {
+        const key = Number(keyStr);
+        if (key === removedIdx) return;
+        result[key > removedIdx ? key - 1 : key] = obj[keyStr];
+      });
+      return result;
+    }
+
+    async function movePlayerAndSave(idx, direction) {
+      const other = idx + direction;
+      if (other < 0 || other >= appState.players.length) return;
+
+      swapArrayIndex(appState.players, idx, other);
+      swapArrayIndex(appState.calendars, idx, other);
+      swapArrayIndex(appState.pins.players, idx, other);
+      swapKeyedIndex(appState.decoys, idx, other);
+      swapKeyedIndex(appState.approvals, idx, other);
+      Object.keys(appState.solutions).forEach((day) => {
+        swapKeyedIndex(appState.solutions[day], idx, other);
+      });
+
+      await saveStateToFirestore();
+      renderAllPlayerDependentUI();
+    }
+
+    async function removePlayerAndSave(idx) {
+      if (appState.players.length <= 1) return;
+      const name = appState.players[idx] || "Person " + (idx + 1);
+      const confirmed = window.confirm(
+        "Wirklich \"" + name + "\" entfernen? Alle ihre Whisky-Einträge, Tipps, Nieten und die Freigabe gehen " +
+        "dabei unwiderruflich verloren, und die Tageszuteilung für den gesamten Kalender wird neu berechnet."
+      );
+      if (!confirmed) return;
+
+      appState.players.splice(idx, 1);
+      appState.calendars.splice(idx, 1);
+      appState.pins.players.splice(idx, 1);
+      appState.decoys = removeKeyedIndex(appState.decoys, idx);
+      appState.approvals = removeKeyedIndex(appState.approvals, idx);
+      Object.keys(appState.solutions).forEach((day) => {
+        appState.solutions[day] = removeKeyedIndex(appState.solutions[day], idx);
+      });
+
+      await saveStateToFirestore();
+      renderAllPlayerDependentUI();
+    }
+
+    function renderAllPlayerDependentUI() {
+      renderPlayerInputs();
+      renderPlayerSelects();
+      renderLoginPlayerButtons();
+      renderResetCodeButtons();
+      renderGuessOverview();
+      renderGuessWhiskySelect();
+      renderNietenSection();
+      renderWhiskyDaysSection();
+      renderResults();
+      renderApprovalSection();
+      renderMyApprovalCard();
     }
 
     function renderLoginPlayerButtons() {
@@ -1933,17 +2048,7 @@
       const names = inputs.map((inp, idx) => inp.value.trim() || "Person " + (idx + 1));
       appState.players = names;
       await saveStateToFirestore();
-      renderPlayerSelects();
-      renderLoginPlayerButtons();
-      renderResetCodeButtons();
-      renderGuessOverview();
-      renderResults();
-      renderGuessWhiskySelect();
-      renderPlayerInputs();
-      renderNietenSection();
-      renderWhiskyDaysSection();
-      renderApprovalSection();
-      renderMyApprovalCard();
+      renderAllPlayerDependentUI();
     }));
 
     addPlayerBtn.addEventListener("click", () => withButtonGuard(addPlayerBtn, async () => {
@@ -1966,15 +2071,7 @@
         addPlayerToast.style.display = "none";
       }, 2500);
 
-      renderPlayerInputs();
-      renderPlayerSelects();
-      renderLoginPlayerButtons();
-      renderResetCodeButtons();
-      renderNietenSection();
-      renderWhiskyDaysSection();
-      renderGuessWhiskySelect();
-      renderResults();
-      renderApprovalSection();
+      renderAllPlayerDependentUI();
     }));
 
     saveDecoyCountBtn.addEventListener("click", () => withButtonGuard(saveDecoyCountBtn, async () => {
