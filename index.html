@@ -213,6 +213,12 @@
       border: 1px solid #4b5563;
     }
 
+    .btn-danger {
+      background: linear-gradient(135deg, #dc2626, #f87171);
+      color: #1f0505;
+      box-shadow: 0 10px 25px rgba(220, 38, 38, 0.35);
+    }
+
     .btn-small {
       padding: 4px 10px;
       font-size: 0.8rem;
@@ -663,6 +669,23 @@
           "richtig" sein. Jede Person kann im Tab "Whisky erfassen" bis zu dieser Anzahl eigener Nieten eintragen.
         </div>
       </div>
+
+      <h2 style="margin-top: 18px;">4. Zurücksetzen</h2>
+      <div class="card">
+        <div class="card-header">
+          <div>Alle erfassten Whiskys löschen</div>
+          <div class="pill">Achtung, unwiderruflich</div>
+        </div>
+        <button id="resetAllWhiskyDataBtn" class="btn btn-danger">
+          Whisky-Tage, Nieten und Tipps löschen
+        </button>
+        <div id="resetAllWhiskyDataToast" class="toast toast-success" style="display:none;"></div>
+        <div class="hint">
+          Löscht für alle 24 Tage die erfassten Whisky-Lösungen, alle Nieten sowie alle bisher abgegebenen Tipps,
+          Bewertungen und Bemerkungen aller drei Kalender. Personen, Zugangscodes und die eingestellte Nieten-Anzahl
+          bleiben erhalten. Es folgt eine Sicherheitsabfrage.
+        </div>
+      </div>
     </section>
 
     <!-- GUESS -->
@@ -1052,6 +1075,9 @@
     const resetPlayer2CodeBtn = document.getElementById("resetPlayer2CodeBtn");
     const resetPlayer3CodeBtn = document.getElementById("resetPlayer3CodeBtn");
     const resetCodeToast = document.getElementById("resetCodeToast");
+
+    const resetAllWhiskyDataBtn = document.getElementById("resetAllWhiskyDataBtn");
+    const resetAllWhiskyDataToast = document.getElementById("resetAllWhiskyDataToast");
 
     const loadingOverlay = document.getElementById("loadingOverlay");
 
@@ -1742,6 +1768,36 @@
     resetPlayer1CodeBtn.addEventListener("click", () => resetPlayerCode(0));
     resetPlayer2CodeBtn.addEventListener("click", () => resetPlayerCode(1));
     resetPlayer3CodeBtn.addEventListener("click", () => resetPlayerCode(2));
+
+    resetAllWhiskyDataBtn.addEventListener("click", () => withButtonGuard(resetAllWhiskyDataBtn, async () => {
+      const confirmed = window.confirm(
+        "Wirklich ALLE erfassten Whisky-Tage, Nieten sowie alle abgegebenen Tipps, Bewertungen und Bemerkungen " +
+        "unwiderruflich löschen? Personen, Zugangscodes und die Nieten-Anzahl bleiben erhalten."
+      );
+      if (!confirmed) return;
+
+      appState.solutions = {};
+      appState.decoys = { 0: [], 1: [], 2: [] };
+      appState.calendars = [
+        { guesses: {}, ratings: {}, notes: {} },
+        { guesses: {}, ratings: {}, notes: {} },
+        { guesses: {}, ratings: {}, notes: {} }
+      ];
+
+      await saveStateToFirestore();
+
+      resetAllWhiskyDataToast.textContent = "Alle erfassten Whiskys, Nieten und Tipps wurden gelöscht.";
+      resetAllWhiskyDataToast.style.display = "block";
+      setTimeout(() => {
+        resetAllWhiskyDataToast.style.display = "none";
+      }, 3000);
+
+      renderNietenSection();
+      renderWhiskyDaysSection();
+      renderGuessOverview();
+      renderGuessWhiskySelect();
+      renderResults();
+    }));
 
     // Login
 
