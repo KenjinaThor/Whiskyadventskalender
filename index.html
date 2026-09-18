@@ -7,16 +7,20 @@
   <meta name="theme-color" content="#020617" />
   <meta name="color-scheme" content="dark" />
 
-  <!-- Icons -->
-  <link rel="icon" href="favicon.ico" sizes="any">
-  <link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
-  <link rel="apple-touch-icon" href="icon.png">
+  <!-- Icons (?v=2: erzwingt einen frischen Abruf, falls Safari/iOS ein
+       vorheriges fehlendes/kaputtes Icon unter der alten URL gecacht hat) -->
+  <link rel="icon" href="favicon.ico?v=2" sizes="any">
+  <link rel="icon" href="icon-192.png?v=2" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="icon.png?v=2">
+  <link rel="apple-touch-icon" sizes="152x152" href="icon-152.png?v=2">
+  <link rel="apple-touch-icon" sizes="167x167" href="icon-167.png?v=2">
+  <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png?v=2">
 
   <!-- iOS / PWA Einstellungen -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Whisky Advent">
-  <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="manifest.json?v=2">
 
   <!-- Frühere Verbindung zu Firebase für schnelleres Laden -->
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
@@ -365,7 +369,7 @@
       color: #fee2e2;
     }
 
-    /* Whisky-Tage: Karte pro Tag mit einem Unterformular je Person */
+    /* Whisky erfassen: Karte pro Tag/Niete mit einem Unterformular je Person */
     .whisky-day-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
@@ -550,8 +554,8 @@
       </div>
 
       <div class="login-footer">
-        Hinweis: Admin kann Namen, alle Whisky-Tage und die Auswertung sehen. Teilnehmer erfassen die Whiskys für
-        ihre eigenen Tage und geben ihre Tipps ab.
+        Hinweis: Admin kann Namen, alle erfassten Whiskys und die Auswertung sehen. Teilnehmer erfassen die Whiskys
+        für ihre eigenen Tage und geben ihre Tipps ab.
       </div>
     </div>
   </div>
@@ -567,7 +571,7 @@
       <span class="logo-dot"></span>
     </h1>
     <div class="subtitle">
-      Für 3 Personen – Admin-Ansicht für Setup und Auswertung, Spieler-Ansicht für Whisky-Tage und Tipps. Daten
+      Für 3 Personen – Admin-Ansicht für Setup und Auswertung, Spieler-Ansicht für Tipps und Whisky erfassen. Daten
       werden zentral in Firebase Firestore gespeichert.
     </div>
 
@@ -576,13 +580,13 @@
         Setup
         <span class="badge">Personen & Codes</span>
       </button>
-      <button class="tab-btn" data-section="whiskies" id="tabWhiskies">
-        Whisky-Tage
-        <span class="badge">Name, Edition, Alter, Volumen</span>
-      </button>
       <button class="tab-btn" data-section="guess" id="tabGuess">
         Tipp abgeben
         <span class="badge">Tag für Tag</span>
+      </button>
+      <button class="tab-btn" data-section="whiskies" id="tabWhiskies">
+        Whisky erfassen
+        <span class="badge">Name, Edition, Alter, Volumen</span>
       </button>
       <button class="tab-btn" data-section="results" id="tabResults">
         Auswertung
@@ -611,7 +615,7 @@
           Personen speichern
         </button>
         <div class="hint">
-          Das machst du einmal. Die Namen erscheinen dann im Login, bei den Whisky-Tagen und in der Auswertung. Die
+          Das machst du einmal. Die Namen erscheinen dann im Login, beim Whisky erfassen und in der Auswertung. Die
           Reihenfolge bestimmt auch, wer an welchem Tag die Whiskys für alle einträgt (Tag 1 → Person 1, Tag 2 →
           Person 2, Tag 3 → Person 3, Tag 4 → Person 1, ...).
         </div>
@@ -636,21 +640,29 @@
         </div>
         <div id="resetCodeToast" class="toast toast-success" style="display:none;"></div>
         <div class="hint">
-          Beim Zurücksetzen wird nur der Code gelöscht. Alle Namen, Whisky-Tage, Bewertungen, Bemerkungen und Tipps
+          Beim Zurücksetzen wird nur der Code gelöscht. Alle Namen, erfassten Whiskys, Bewertungen, Bemerkungen und Tipps
           bleiben in Firestore erhalten.
         </div>
       </div>
-    </section>
 
-    <!-- WHISKY-TAGE -->
-    <section id="whiskies" class="section">
-      <h2>Whisky-Tage</h2>
-      <div class="hint" style="margin-bottom: 6px;">
-        An jedem Tag befüllt eine Person die Whiskys für sich und die beiden anderen Teilnehmer – jeweils mit Name,
-        Edition, Alter und Volumen. Diese Angaben sind direkt die Lösung für diesen Tag, ein separater
-        Zwischenschritt entfällt.
+      <h2 style="margin-top: 18px;">3. Nieten</h2>
+      <div class="card">
+        <div class="card-header">
+          <div>Nieten (Verwirr-Whiskys)</div>
+          <div class="pill">optional</div>
+        </div>
+        <label for="decoyCountInput">Anzahl Nieten pro Person</label>
+        <input type="number" id="decoyCountInput" min="0" max="20" placeholder="z. B. 2" />
+        <button id="saveDecoyCountBtn" class="btn btn-primary" style="margin-top: 8px;">
+          Anzahl speichern
+        </button>
+        <div id="decoyCountToast" class="toast toast-success" style="display:none;"></div>
+        <div class="hint">
+          Nieten sind Whiskys, die zwar erfasst werden, aber an keinem Tag im Kalender wirklich vorkommen. Sie
+          tauchen im Tipp-Dropdown als zusätzliche, bewusst verwirrende Auswahlmöglichkeiten auf und können nie
+          "richtig" sein. Jede Person kann im Tab "Whisky erfassen" bis zu dieser Anzahl eigener Nieten eintragen.
+        </div>
       </div>
-      <div id="whiskyDaysContainer"></div>
     </section>
 
     <!-- GUESS -->
@@ -701,8 +713,8 @@
             </button>
             <div id="guessToast" class="toast" style="display: none;"></div>
             <div class="hint">
-              Die Auswahl zeigt die für diesen Tag hinterlegten Whiskys. Bereits von dir verwendete Whiskys sind rot
-              markiert und mit "(bereits ausgewählt)" gekennzeichnet.
+              Die Auswahl zeigt die für diesen Tag hinterlegten Whiskys (inklusive eventueller Nieten). Bereits von
+              dir verwendete Whiskys sind rot markiert und mit "(bereits ausgewählt)" gekennzeichnet.
             </div>
           </div>
         </div>
@@ -730,6 +742,18 @@
           </div>
         </div>
       </div>
+    </section>
+
+    <!-- WHISKY ERFASSEN -->
+    <section id="whiskies" class="section">
+      <h2>Whisky erfassen</h2>
+      <div class="hint" style="margin-bottom: 6px;">
+        An jedem Tag befüllt eine Person die Whiskys für sich und die beiden anderen Teilnehmer – jeweils mit Name,
+        Edition, Alter und Volumen. Diese Angaben sind direkt die Lösung für diesen Tag, ein separater
+        Zwischenschritt entfällt.
+      </div>
+      <div id="nietenContainer"></div>
+      <div id="whiskyDaysContainer"></div>
     </section>
 
     <!-- RESULTS -->
@@ -811,6 +835,10 @@
           { guesses: {}, ratings: {}, notes: {} },
           { guesses: {}, ratings: {}, notes: {} }
         ],
+        // Anzahl "Nieten"-Slots, die jede Person maximal anlegen darf
+        decoyCount: 0,
+        // decoys[ownerIndex] = [{ name, edition, age, volume }, ...], nie eine echte Lösung
+        decoys: { 0: [], 1: [], 2: [] },
         pins: {
           players: [null, null, null]
         }
@@ -861,6 +889,17 @@
       return solutions;
     }
 
+    function normalizeDecoys(raw) {
+      const decoys = { 0: [], 1: [], 2: [] };
+      if (!raw || typeof raw !== "object") return decoys;
+      [0, 1, 2].forEach((ownerIdx) => {
+        if (Array.isArray(raw[ownerIdx])) {
+          decoys[ownerIdx] = raw[ownerIdx].map(normalizeWhiskyEntry);
+        }
+      });
+      return decoys;
+    }
+
     function normalizeState(raw) {
       const base = defaultState();
       if (raw && Array.isArray(raw.players) && raw.players.length === 3) {
@@ -874,6 +913,10 @@
           notes: c && c.notes ? c.notes : {}
         }));
       }
+      if (raw && Number.isFinite(raw.decoyCount) && raw.decoyCount >= 0) {
+        base.decoyCount = Math.floor(raw.decoyCount);
+      }
+      base.decoys = normalizeDecoys(raw && raw.decoys);
       if (raw && raw.pins && Array.isArray(raw.pins.players) && raw.pins.players.length === 3) {
         base.pins.players = raw.pins.players;
       }
@@ -932,6 +975,11 @@
           if (entry.name) names.add(entry.name);
         }
       }
+      // Nieten: erfasste, aber nie echte Whiskys derselben zuständigen Person -
+      // zusätzliche, bewusst verwirrende Auswahlmöglichkeiten.
+      (appState.decoys[ownerIdx] || []).forEach((entry) => {
+        if (entry && entry.name) names.add(entry.name);
+      });
       return Array.from(names).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
     }
 
@@ -950,6 +998,11 @@
     ];
     const savePlayersBtn = document.getElementById("savePlayersBtn");
 
+    const decoyCountInput = document.getElementById("decoyCountInput");
+    const saveDecoyCountBtn = document.getElementById("saveDecoyCountBtn");
+    const decoyCountToast = document.getElementById("decoyCountToast");
+
+    const nietenContainer = document.getElementById("nietenContainer");
     const whiskyDaysContainer = document.getElementById("whiskyDaysContainer");
 
     const guessPlayerSelect = document.getElementById("guessPlayerSelect");
@@ -1040,6 +1093,10 @@
       loginPlayerName3.textContent = appState.players[2] || "Person 3";
     }
 
+    function renderDecoyCountInput() {
+      decoyCountInput.value = String(appState.decoyCount || 0);
+    }
+
     function renderPlayerSelects() {
       const selects = [guessPlayerSelect, resultsPlayerSelect];
       selects.forEach((sel) => {
@@ -1077,17 +1134,13 @@
       return days;
     }
 
-    function buildWhiskySubform(day, playerIdx) {
-      const entry = getSolutionEntry(day, playerIdx);
-      const playerName = appState.players[playerIdx] || "Person " + (playerIdx + 1);
-      const isYou = currentRole && currentRole.type === "player" && currentRole.index === playerIdx;
-
+    function buildWhiskyFieldGroup(titleText, entry, isYou) {
       const sub = document.createElement("div");
       sub.className = "whisky-subform" + (isYou ? " is-you" : "");
 
       const title = document.createElement("div");
       title.className = "login-section-title";
-      title.textContent = playerName + (isYou ? " (du)" : "");
+      title.textContent = titleText;
       sub.appendChild(title);
 
       const nameInput = document.createElement("input");
@@ -1132,6 +1185,102 @@
       sub.appendChild(volumeInput);
 
       return { sub, nameInput, editionInput, ageInput, volumeInput };
+    }
+
+    function buildWhiskySubform(day, playerIdx) {
+      const entry = getSolutionEntry(day, playerIdx);
+      const playerName = appState.players[playerIdx] || "Person " + (playerIdx + 1);
+      const isYou = currentRole && currentRole.type === "player" && currentRole.index === playerIdx;
+      return buildWhiskyFieldGroup(playerName + (isYou ? " (du)" : ""), entry, isYou);
+    }
+
+    function buildDecoySubform(ownerIdx, slotIdx) {
+      const existing = appState.decoys[ownerIdx] || [];
+      const entry = normalizeWhiskyEntry(existing[slotIdx]);
+      return buildWhiskyFieldGroup("Niete " + (slotIdx + 1), entry, false);
+    }
+
+    // Welche Personen (als Besitzer-Index) darf die aktuell angemeldete Rolle
+    // mit Nieten befüllen?
+    function getEditableOwnerIndicesForCurrentRole() {
+      if (!currentRole) return [];
+      if (currentRole.type === "admin") return [0, 1, 2];
+      return [currentRole.index];
+    }
+
+    function renderNietenSection() {
+      nietenContainer.innerHTML = "";
+      const count = appState.decoyCount || 0;
+      if (count <= 0) return;
+
+      const ownerIndices = getEditableOwnerIndicesForCurrentRole();
+      if (ownerIndices.length === 0) return;
+
+      const fragment = document.createDocumentFragment();
+
+      ownerIndices.forEach((ownerIdx) => {
+        const ownerName = appState.players[ownerIdx] || "Person " + (ownerIdx + 1);
+
+        const card = document.createElement("div");
+        card.className = "card";
+
+        const header = document.createElement("div");
+        header.className = "card-header";
+        const title = document.createElement("div");
+        title.textContent = "Nieten von " + ownerName;
+        const pill = document.createElement("div");
+        pill.className = "pill";
+        pill.textContent = count === 1 ? "1 Niete" : count + " Nieten";
+        header.appendChild(title);
+        header.appendChild(pill);
+        card.appendChild(header);
+
+        const grid = document.createElement("div");
+        grid.className = "whisky-day-grid";
+
+        const fieldRefs = [];
+        for (let slotIdx = 0; slotIdx < count; slotIdx++) {
+          const built = buildDecoySubform(ownerIdx, slotIdx);
+          grid.appendChild(built.sub);
+          fieldRefs.push(built);
+        }
+
+        card.appendChild(grid);
+
+        const saveBtn = document.createElement("button");
+        saveBtn.className = "btn btn-primary btn-small";
+        saveBtn.style.marginTop = "8px";
+        saveBtn.textContent = "Nieten von " + ownerName + " speichern";
+
+        const toast = document.createElement("div");
+        toast.className = "toast toast-success";
+        toast.style.display = "none";
+
+        saveBtn.addEventListener("click", () => withButtonGuard(saveBtn, async () => {
+          appState.decoys[ownerIdx] = fieldRefs.map((refs) => ({
+            name: refs.nameInput.value.trim(),
+            edition: refs.editionInput.value.trim(),
+            age: refs.ageInput.value.trim(),
+            volume: refs.volumeInput.value.trim()
+          }));
+          await saveStateToFirestore();
+
+          toast.textContent = "Nieten gespeichert.";
+          toast.style.display = "block";
+          setTimeout(() => {
+            toast.style.display = "none";
+          }, 2000);
+
+          renderGuessWhiskySelect();
+        }));
+
+        card.appendChild(saveBtn);
+        card.appendChild(toast);
+
+        fragment.appendChild(card);
+      });
+
+      nietenContainer.appendChild(fragment);
     }
 
     function renderWhiskyDaysSection() {
@@ -1464,6 +1613,7 @@
         renderGuessWhiskySelect();
       }
 
+      renderNietenSection();
       renderWhiskyDaysSection();
     }
 
@@ -1481,7 +1631,25 @@
       renderResults();
       renderGuessWhiskySelect();
       renderPlayerInputs();
+      renderNietenSection();
       renderWhiskyDaysSection();
+    }));
+
+    saveDecoyCountBtn.addEventListener("click", () => withButtonGuard(saveDecoyCountBtn, async () => {
+      const raw = Number(decoyCountInput.value);
+      const count = Number.isFinite(raw) && raw >= 0 ? Math.floor(raw) : 0;
+      appState.decoyCount = count;
+      decoyCountInput.value = String(count);
+      await saveStateToFirestore();
+
+      decoyCountToast.textContent = "Anzahl Nieten gespeichert (" + count + ").";
+      decoyCountToast.style.display = "block";
+      setTimeout(() => {
+        decoyCountToast.style.display = "none";
+      }, 2000);
+
+      renderNietenSection();
+      renderGuessWhiskySelect();
     }));
 
     guessPlayerSelect.addEventListener("change", () => {
@@ -1660,6 +1828,7 @@
 
       renderPlayerInputs();
       renderPlayerSelects();
+      renderDecoyCountInput();
       renderGuessDaySelect();
       renderGuessOverview();
       renderGuessWhiskySelect();
