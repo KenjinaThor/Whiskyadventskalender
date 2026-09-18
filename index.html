@@ -4,13 +4,25 @@
   <meta charset="UTF-8" />
   <title>Whisky Adventskalender</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#020617" />
+  <meta name="color-scheme" content="dark" />
 
-  <!-- iOS / PWA Icon und Einstellungen -->
+  <!-- Icons -->
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
   <link rel="apple-touch-icon" href="icon.png">
+
+  <!-- iOS / PWA Einstellungen -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Whisky Advent">
   <link rel="manifest" href="manifest.json">
+
+  <!-- Fruehere Verbindung zu Firebase fuer schnelleres Laden -->
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="dns-prefetch" href="https://www.gstatic.com">
+  <link rel="dns-prefetch" href="https://firestore.googleapis.com">
 
   <style>
     :root {
@@ -892,11 +904,10 @@
       return list;
     }
 
-    function getWhiskyListForDay(day) {
-      const baseList = getSortedWhiskyList();
+    function getWhiskyListForDay(day, sortedList) {
+      const baseList = sortedList || getSortedWhiskyList();
       const ownerSub = getOwnerSubstringForDay(day);
-      const filtered = baseList.filter((name) => name.includes(ownerSub));
-      return filtered;
+      return baseList.filter((name) => name.includes(ownerSub));
     }
 
     // UI-Referenzen
@@ -1024,6 +1035,8 @@
 
     function renderSolutionTable() {
       solutionTableBody.innerHTML = "";
+      const fragment = document.createDocumentFragment();
+      const sortedList = getSortedWhiskyList();
 
       for (let day = 1; day <= 24; day++) {
         const tr = document.createElement("tr");
@@ -1036,7 +1049,7 @@
         const select = document.createElement("select");
         select.id = "solution-day-" + day;
 
-        const listForDay = getWhiskyListForDay(day);
+        const listForDay = getWhiskyListForDay(day, sortedList);
 
         const emptyOpt = document.createElement("option");
         emptyOpt.value = "";
@@ -1062,8 +1075,10 @@
         tdName.appendChild(select);
         tr.appendChild(tdName);
 
-        solutionTableBody.appendChild(tr);
+        fragment.appendChild(tr);
       }
+
+      solutionTableBody.appendChild(fragment);
     }
 
     function renderGuessDaySelect() {
@@ -1139,6 +1154,7 @@
       const cal = appState.calendars[idx];
 
       guessOverviewTableBody.innerHTML = "";
+      const fragment = document.createDocumentFragment();
       for (let day = 1; day <= 24; day++) {
         const tr = document.createElement("tr");
         const tdDay = document.createElement("td");
@@ -1157,8 +1173,9 @@
         tr.appendChild(tdGuess);
         tr.appendChild(tdRating);
         tr.appendChild(tdNote);
-        guessOverviewTableBody.appendChild(tr);
+        fragment.appendChild(tr);
       }
+      guessOverviewTableBody.appendChild(fragment);
     }
 
     function renderResults() {
@@ -1170,6 +1187,7 @@
       let totalWithSolution = 0;
 
       resultsTableBody.innerHTML = "";
+      const fragment = document.createDocumentFragment();
 
       for (let day = 1; day <= 24; day++) {
         const solution = appState.solutions[day] || "";
@@ -1225,8 +1243,10 @@
         }
 
         tr.appendChild(tdResult);
-        resultsTableBody.appendChild(tr);
+        fragment.appendChild(tr);
       }
+
+      resultsTableBody.appendChild(fragment);
 
       const denominator = totalWithSolution || 24;
       scoreSummary.innerHTML =
@@ -1316,7 +1336,18 @@
 
     // Events
 
-    savePlayersBtn.addEventListener("click", async () => {
+    // Verhindert Doppel-Klicks waehrend eines laufenden Firestore-Schreibvorgangs
+    async function withButtonGuard(btn, handler) {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      try {
+        await handler();
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    savePlayersBtn.addEventListener("click", () => withButtonGuard(savePlayersBtn, async () => {
       const names = playerInputs.map((inp, idx) => {
         const v = inp.value.trim();
         return v || "Person " + (idx + 1);
@@ -1328,9 +1359,9 @@
       renderResults();
       renderGuessWhiskySelect();
       renderPlayerInputs();
-    });
+    }));
 
-    saveSolutionsBtn.addEventListener("click", async () => {
+    saveSolutionsBtn.addEventListener("click", () => withButtonGuard(saveSolutionsBtn, async () => {
       for (let day = 1; day <= 24; day++) {
         const select = document.getElementById("solution-day-" + day);
         if (select) {
@@ -1350,9 +1381,9 @@
         solutionToast.style.display = "none";
       }, 2000);
       renderResults();
-    });
+    }));
 
-    saveWhiskyListBtn.addEventListener("click", async () => {
+    saveWhiskyListBtn.addEventListener("click", () => withButtonGuard(saveWhiskyListBtn, async () => {
       const raw = whiskyListInput.value.split("\n");
       const cleaned = raw
         .map((l) => l.trim())
@@ -1371,7 +1402,7 @@
 
       renderSolutionTable();
       renderGuessWhiskySelect();
-    });
+    }));
 
     guessPlayerSelect.addEventListener("change", () => {
       renderGuessOverview();
@@ -1384,7 +1415,7 @@
       guessToast.style.display = "none";
     });
 
-    saveGuessBtn.addEventListener("click", async () => {
+    saveGuessBtn.addEventListener("click", () => withButtonGuard(saveGuessBtn, async () => {
       const idx = Number(guessPlayerSelect.value || 0);
       const day = Number(guessDaySelect.value || 1);
       const guess = (guessSelect.value || "").trim();
@@ -1439,7 +1470,7 @@
       renderGuessOverview();
       renderGuessWhiskySelect();
       renderResults();
-    });
+    }));
 
     resultsPlayerSelect.addEventListener("change", () => {
       renderResults();
