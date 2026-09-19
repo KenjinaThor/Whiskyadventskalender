@@ -980,7 +980,8 @@
         Teilnehmer) trägst du ihn mit Name, Edition, Alter und Alkoholgehalt (Vol.-%) ein – diese Angabe ist direkt
         die Lösung für diesen Tag, ein separater Zwischenschritt entfällt. Beim Tippen im Namensfeld erscheinen
         automatisch Vorschläge aus einer hinterlegten Whisky-Datenbank – bei Auswahl werden Edition/Alter/
-        Alkoholgehalt wo bekannt mit ausgefüllt.
+        Alkoholgehalt wo bekannt mit ausgefüllt. Falsch eingetragen? Mit "Whisky löschen" wird der jeweilige Tag
+        wieder leer, damit er neu erfasst werden kann.
       </div>
       <div id="nietenContainer"></div>
       <div id="whiskyDaysContainer"></div>
@@ -1860,10 +1861,17 @@
 
         card.appendChild(grid);
 
+        const btnRow = document.createElement("div");
+        btnRow.className = "flex";
+        btnRow.style.marginTop = "8px";
+
         const saveBtn = document.createElement("button");
         saveBtn.className = "btn btn-primary btn-small";
-        saveBtn.style.marginTop = "8px";
         saveBtn.textContent = "Tag " + day + " speichern";
+
+        const clearBtn = document.createElement("button");
+        clearBtn.className = "btn btn-outline btn-small";
+        clearBtn.textContent = "Whisky löschen";
 
         const toast = document.createElement("div");
         toast.className = "toast toast-success";
@@ -1879,6 +1887,7 @@
           await saveStateToFirestore();
 
           toast.textContent = "Tag " + day + " gespeichert.";
+          toast.className = "toast toast-success";
           toast.style.display = "block";
           setTimeout(() => {
             toast.style.display = "none";
@@ -1888,7 +1897,37 @@
           renderResults();
         }));
 
-        card.appendChild(saveBtn);
+        clearBtn.addEventListener("click", () => withButtonGuard(clearBtn, async () => {
+          const hasEntry = !!(appState.solutions[day] && appState.solutions[day].name);
+          if (!hasEntry) return;
+
+          const confirmed = window.confirm(
+            "Whisky für Tag " + day + " wirklich löschen? Der Eintrag ist danach leer, bis er neu erfasst wird."
+          );
+          if (!confirmed) return;
+
+          delete appState.solutions[day];
+          await saveStateToFirestore();
+
+          built.nameInput.value = "";
+          built.editionInput.value = "";
+          built.ageInput.value = "";
+          built.volumeInput.value = "";
+
+          toast.textContent = "Whisky für Tag " + day + " gelöscht.";
+          toast.className = "toast toast-info";
+          toast.style.display = "block";
+          setTimeout(() => {
+            toast.style.display = "none";
+          }, 2000);
+
+          renderGuessWhiskySelect();
+          renderResults();
+        }));
+
+        btnRow.appendChild(saveBtn);
+        btnRow.appendChild(clearBtn);
+        card.appendChild(btnRow);
         card.appendChild(toast);
 
         fragment.appendChild(card);
