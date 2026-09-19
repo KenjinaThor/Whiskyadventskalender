@@ -615,7 +615,7 @@
       </button>
       <button class="tab-btn" data-section="whiskies" id="tabWhiskies">
         Whisky erfassen
-        <span class="badge">Name, Edition, Alter, Volumen</span>
+        <span class="badge">Name, Edition, Alter, Alkoholgehalt</span>
       </button>
       <button class="tab-btn" data-section="results" id="tabResults">
         Auswertung
@@ -808,9 +808,9 @@
       <h2>Whisky erfassen</h2>
       <div class="hint" style="margin-bottom: 6px;">
         An jedem Tag befüllt eine Person die Whiskys für sich und alle anderen Teilnehmer – jeweils mit Name,
-        Edition, Alter und Volumen. Diese Angaben sind direkt die Lösung für diesen Tag, ein separater
-        Zwischenschritt entfällt. Beim Tippen im Namensfeld erscheinen automatisch Vorschläge aus einer
-        hinterlegten Whisky-Datenbank – bei Auswahl werden Edition/Alter/Volumen wo bekannt mit ausgefüllt.
+        Edition, Alter und Alkoholgehalt (Vol.-%). Diese Angaben sind direkt die Lösung für diesen Tag, ein
+        separater Zwischenschritt entfällt. Beim Tippen im Namensfeld erscheinen automatisch Vorschläge aus einer
+        hinterlegten Whisky-Datenbank – bei Auswahl werden Edition/Alter/Alkoholgehalt wo bekannt mit ausgefüllt.
       </div>
       <div id="nietenContainer"></div>
       <div id="whiskyDaysContainer"></div>
@@ -1458,11 +1458,11 @@
 
       const volumeInput = document.createElement("input");
       volumeInput.type = "text";
-      volumeInput.placeholder = "z. B. 700 ml";
+      volumeInput.placeholder = "z. B. 40%";
       volumeInput.value = entry.volume;
       const volumeLabel = document.createElement("label");
       volumeLabel.style.marginTop = "6px";
-      volumeLabel.textContent = "Volumen";
+      volumeLabel.textContent = "Alkoholgehalt (Vol.-%)";
       sub.appendChild(volumeLabel);
       sub.appendChild(volumeInput);
 
@@ -1472,7 +1472,7 @@
     }
 
     // Autofill: Vorschlagsliste unter dem Namensfeld, aus whisky-database.json.
-    // Beim Auswählen eines Vorschlags werden Edition/Alter/Volumen automatisch
+    // Beim Auswählen eines Vorschlags werden Edition/Alter/Alkoholgehalt automatisch
     // übernommen (nur dort, wo die Datenbank tatsächlich einen Wert hat).
     let whiskyReferenceDb = [];
 
