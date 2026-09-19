@@ -978,10 +978,12 @@
       <div class="hint" style="margin-bottom: 6px;">
         Jeder Tag hat genau einen gemeinsamen Whisky für alle Teilnehmer. An deinen Tagen (reihum nach Anzahl
         Teilnehmer) trägst du ihn mit Name, Edition, Alter und Alkoholgehalt (Vol.-%) ein – diese Angabe ist direkt
-        die Lösung für diesen Tag, ein separater Zwischenschritt entfällt. Beim Tippen im Namensfeld erscheinen
-        automatisch Vorschläge aus einer hinterlegten Whisky-Datenbank – bei Auswahl werden Edition/Alter/
-        Alkoholgehalt wo bekannt mit ausgefüllt. Falsch eingetragen? Mit "Whisky löschen" wird der jeweilige Tag
-        wieder leer, damit er neu erfasst werden kann.
+        die Lösung für diesen Tag, ein separater Zwischenschritt entfällt. Deine Eingaben werden automatisch
+        gespeichert (kurz nach dem Tippen bzw. beim Verlassen eines Feldes); der Button dient nur noch als
+        zusätzliche Sicherheit zum sofortigen Speichern. Beim Tippen im Namensfeld erscheinen automatisch
+        Vorschläge aus einer hinterlegten Whisky-Datenbank – bei Auswahl werden Edition/Alter/Alkoholgehalt wo
+        bekannt mit ausgefüllt. Falsch eingetragen? Mit "Whisky löschen" wird der jeweilige Tag wieder leer, damit
+        er neu erfasst werden kann.
       </div>
       <div id="nietenContainer"></div>
       <div id="whiskyDaysContainer"></div>
@@ -1399,6 +1401,88 @@
       }
     }
 
+    // Autospeicherung fuer Whisky-Formulare: speichert automatisch kurz nachdem
+    // getippt wurde (debounce) oder sofort beim Verlassen eines Feldes (blur) -
+    // aber nur, wenn sich seit dem letzten gespeicherten Stand wirklich etwas
+    // geaendert hat. Der Save-Button bleibt als manueller, sofortiger Weg
+    // erhalten (forceSave) und teilt sich denselben saveFn/Baseline-Zustand.
+    function attachAutoSave(inputs, readValues, saveFn, toast, savedLabel) {
+      let baseline = JSON.stringify(readValues());
+      let timer = null;
+      let saving = false;
+      let pendingAfterSave = false;
+
+      function showSavedToast(label) {
+        if (!toast) return;
+        toast.textContent = label;
+        toast.className = "toast toast-success";
+        toast.style.display = "block";
+        setTimeout(() => {
+          toast.style.display = "none";
+        }, 1500);
+      }
+
+      async function runSave(force, label) {
+        const current = JSON.stringify(readValues());
+        if (!force && current === baseline) return;
+        if (saving) {
+          pendingAfterSave = true;
+          return;
+        }
+        saving = true;
+        try {
+          await saveFn();
+          baseline = current;
+          showSavedToast(label || savedLabel);
+        } finally {
+          saving = false;
+          if (pendingAfterSave) {
+            pendingAfterSave = false;
+            runSave(false);
+          }
+        }
+      }
+
+      function scheduleDebounced() {
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => {
+          timer = null;
+          runSave(false);
+        }, 900);
+      }
+
+      function flushNow() {
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+        runSave(false);
+      }
+
+      function cancelPending() {
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+      }
+
+      function resetBaseline() {
+        baseline = JSON.stringify(readValues());
+      }
+
+      function forceSave(label) {
+        cancelPending();
+        return runSave(true, label);
+      }
+
+      inputs.forEach((input) => {
+        input.addEventListener("input", scheduleDebounced);
+        input.addEventListener("blur", flushNow);
+      });
+
+      return { cancelPending, resetBaseline, forceSave };
+    }
+
     function renderPlayerInputs() {
       playerInputsContainer.innerHTML = "";
       const fragment = document.createDocumentFragment();
@@ -1703,6 +1787,9 @@
             if (item.age) ageInput.value = item.age;
             if (item.volume) volumeInput.value = item.volume;
             hideList();
+            // .value setzen loest kein natives "input"-Event aus - manuell
+            // anstossen, damit die Autospeicherung die Auswahl mitbekommt.
+            nameInput.dispatchEvent(new Event("input", { bubbles: true }));
           });
           list.appendChild(li);
         });
@@ -1790,7 +1877,7 @@
         toast.className = "toast toast-success";
         toast.style.display = "none";
 
-        saveBtn.addEventListener("click", () => withButtonGuard(saveBtn, async () => {
+        async function saveDecoys() {
           appState.decoys[ownerIdx] = fieldRefs.map((refs) => ({
             name: refs.nameInput.value.trim(),
             edition: refs.editionInput.value.trim(),
@@ -1798,15 +1885,23 @@
             volume: refs.volumeInput.value.trim()
           }));
           await saveStateToFirestore();
-
-          toast.textContent = "Nieten gespeichert.";
-          toast.style.display = "block";
-          setTimeout(() => {
-            toast.style.display = "none";
-          }, 2000);
-
           renderGuessWhiskySelect();
-        }));
+        }
+
+        const decoyInputs = fieldRefs.flatMap((refs) => [
+          refs.nameInput, refs.editionInput, refs.ageInput, refs.volumeInput
+        ]);
+        const autoSave = attachAutoSave(
+          decoyInputs,
+          () => decoyInputs.map((inp) => inp.value),
+          saveDecoys,
+          toast,
+          "Nieten automatisch gespeichert."
+        );
+
+        saveBtn.addEventListener("click", () => withButtonGuard(saveBtn, () => (
+          autoSave.forceSave("Nieten gespeichert.")
+        )));
 
         card.appendChild(saveBtn);
         card.appendChild(toast);
@@ -1877,7 +1972,7 @@
         toast.className = "toast toast-success";
         toast.style.display = "none";
 
-        saveBtn.addEventListener("click", () => withButtonGuard(saveBtn, async () => {
+        async function saveDayEntry() {
           appState.solutions[day] = {
             name: built.nameInput.value.trim(),
             edition: built.editionInput.value.trim(),
@@ -1885,17 +1980,22 @@
             volume: built.volumeInput.value.trim()
           };
           await saveStateToFirestore();
-
-          toast.textContent = "Tag " + day + " gespeichert.";
-          toast.className = "toast toast-success";
-          toast.style.display = "block";
-          setTimeout(() => {
-            toast.style.display = "none";
-          }, 2000);
-
           renderGuessWhiskySelect();
           renderResults();
-        }));
+        }
+
+        const dayInputs = [built.nameInput, built.editionInput, built.ageInput, built.volumeInput];
+        const autoSave = attachAutoSave(
+          dayInputs,
+          () => dayInputs.map((inp) => inp.value),
+          saveDayEntry,
+          toast,
+          "Automatisch gespeichert."
+        );
+
+        saveBtn.addEventListener("click", () => withButtonGuard(saveBtn, () => (
+          autoSave.forceSave("Tag " + day + " gespeichert.")
+        )));
 
         clearBtn.addEventListener("click", () => withButtonGuard(clearBtn, async () => {
           const hasEntry = !!(appState.solutions[day] && appState.solutions[day].name);
@@ -1906,6 +2006,8 @@
           );
           if (!confirmed) return;
 
+          autoSave.cancelPending();
+
           delete appState.solutions[day];
           await saveStateToFirestore();
 
@@ -1913,6 +2015,7 @@
           built.editionInput.value = "";
           built.ageInput.value = "";
           built.volumeInput.value = "";
+          autoSave.resetBaseline();
 
           toast.textContent = "Whisky für Tag " + day + " gelöscht.";
           toast.className = "toast toast-info";
