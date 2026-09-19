@@ -31,21 +31,71 @@
   <style>
     :root {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --amber-500: #f97316;
+      --amber-300: #facc15;
+      --amber-glow: rgba(249, 115, 22, 0.45);
+      --frost-400: #38bdf8;
+      --frost-glow: rgba(56, 189, 248, 0.35);
+      --bg-deep: #05070f;
+      --shadow-soft: 0 20px 45px rgba(0, 0, 0, 0.6);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
     }
 
     body {
       margin: 0;
-      background: #0f172a;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 15% -10%, rgba(249, 115, 22, 0.12), transparent 45%),
+        radial-gradient(circle at 100% 0%, rgba(56, 189, 248, 0.09), transparent 42%),
+        var(--bg-deep);
       color: #e5e7eb;
       display: flex;
       justify-content: center;
       padding: 16px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Dekorativer, ruhiger Schneefall im Hintergrund - rein optisch */
+    #snowfall {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+    }
+
+    .snowflake {
+      position: absolute;
+      top: -8vh;
+      color: rgba(226, 232, 240, 0.65);
+      text-shadow: 0 0 6px rgba(148, 163, 184, 0.4);
+      animation-name: snow-fall;
+      animation-timing-function: linear;
+      animation-iteration-count: infinite;
+      will-change: transform;
+    }
+
+    @keyframes snow-fall {
+      from { transform: translateY(-8vh) translateX(0); }
+      to { transform: translateY(108vh) translateX(var(--drift, 20px)); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #snowfall { display: none; }
     }
 
     .app {
-      background: #020617;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.5), transparent 120px), #020617;
       border-radius: 16px;
-      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6);
+      box-shadow: var(--shadow-soft), 0 0 0 1px rgba(249, 115, 22, 0.05);
       max-width: 1100px;
       width: 100%;
       padding: 20px 24px 28px;
@@ -57,18 +107,26 @@
 
     h1 {
       margin-top: 0;
-      font-size: 1.7rem;
+      font-size: 1.8rem;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
+      letter-spacing: -0.01em;
     }
 
-    h1 span.logo-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 999px;
-      background: linear-gradient(135deg, #f97316, #facc15);
-      box-shadow: 0 0 12px rgba(249, 115, 22, 0.8);
+    .brand-mark {
+      display: inline-flex;
+      flex-shrink: 0;
+      width: 34px;
+      height: 34px;
+      filter: drop-shadow(0 2px 6px rgba(249, 115, 22, 0.5));
+    }
+
+    .brand-text {
+      background: linear-gradient(135deg, #fff7ed 10%, var(--amber-300) 55%, var(--amber-500) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
     }
 
     h2 {
@@ -140,6 +198,12 @@
 
     .section.active {
       display: block;
+      animation: sectionFadeIn 0.35s ease;
+    }
+
+    @keyframes sectionFadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .grid-2 {
@@ -205,6 +269,24 @@
       background: linear-gradient(135deg, #f97316, #facc15);
       color: #020617;
       box-shadow: 0 10px 25px rgba(248, 181, 0, 0.35);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -60%;
+      width: 40%;
+      height: 100%;
+      background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+      transform: skewX(-20deg);
+      transition: left 0.5s ease;
+    }
+
+    .btn-primary:hover::after {
+      left: 130%;
     }
 
     .btn-outline {
@@ -398,6 +480,54 @@
       margin-top: 0;
     }
 
+    /* Kleines "Adventstürchen" vor der Tagesnummer */
+    .day-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      background: linear-gradient(145deg, var(--amber-500), var(--amber-300));
+      color: #1f0505;
+      font-weight: 700;
+      font-size: 0.75rem;
+      margin-right: 8px;
+      box-shadow: 0 4px 10px rgba(249, 115, 22, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+      vertical-align: middle;
+    }
+
+    /* Verzierte Trennlinie im Login-Bereich */
+    .deco-divider {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 4px 0 12px;
+      color: var(--amber-300);
+      font-size: 0.9rem;
+    }
+
+    .deco-divider::before,
+    .deco-divider::after {
+      content: "";
+      flex: 1 1 auto;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #374151, transparent);
+    }
+
+    .spinner {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 3px solid rgba(249, 115, 22, 0.22);
+      border-top-color: var(--amber-500);
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
     /* Autofill-Vorschlagsliste unter dem Namensfeld */
     .autocomplete-wrap {
       position: relative;
@@ -507,8 +637,10 @@
       inset: 0;
       background: rgba(15, 23, 42, 0.9);
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      gap: 14px;
       z-index: 20;
       color: #e5e7eb;
       font-size: 1rem;
@@ -526,12 +658,19 @@
 </head>
 <body>
   <!-- Loading Overlay für Firestore -->
-  <div id="loadingOverlay">Daten werden geladen ...</div>
+  <div id="loadingOverlay">
+    <div class="spinner" aria-hidden="true"></div>
+    <div>Daten werden geladen ...</div>
+  </div>
+
+  <!-- Dekorativer Schneefall (rein optisch, keine Interaktion) -->
+  <div id="snowfall" aria-hidden="true"></div>
 
   <!-- Login-Overlay -->
   <div id="loginOverlay" class="hidden">
     <div id="loginCard">
       <h2>Anmeldung</h2>
+      <div class="deco-divider" aria-hidden="true">❄</div>
       <div class="subtitle" style="margin-bottom: 10px;">
         Bitte wähle, ob du als Administrator oder als eine der Personen arbeiten willst.
       </div>
@@ -596,8 +735,26 @@
     </div>
 
     <h1>
-      Whisky Adventskalender
-      <span class="logo-dot"></span>
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="glassGlow" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#facc15" />
+              <stop offset="100%" stop-color="#f97316" />
+            </linearGradient>
+          </defs>
+          <path d="M11 14h26l-2.6 21.5a4 4 0 0 1-3.97 3.5H17.57a4 4 0 0 1-3.97-3.5L11 14z"
+                fill="url(#glassGlow)" opacity="0.18" />
+          <path d="M11 14h26l-2.6 21.5a4 4 0 0 1-3.97 3.5H17.57a4 4 0 0 1-3.97-3.5L11 14z"
+                stroke="url(#glassGlow)" stroke-width="2" stroke-linejoin="round" />
+          <path d="M13.4 20.5h21.2" stroke="url(#glassGlow)" stroke-width="2" opacity="0.6" />
+          <path d="M9 14h30" stroke="#e5e7eb" stroke-width="2" stroke-linecap="round" />
+          <circle cx="37" cy="9" r="1.6" fill="#f8fafc" />
+          <circle cx="41" cy="14" r="1.1" fill="#f8fafc" />
+          <circle cx="34.5" cy="5.5" r="1" fill="#f8fafc" />
+        </svg>
+      </span>
+      <span class="brand-text">Whisky Adventskalender</span>
     </h1>
     <div class="subtitle">
       Admin-Ansicht für Setup und Auswertung, Spieler-Ansicht für Tipps und Whisky erfassen. Daten werden zentral
@@ -1177,9 +1334,34 @@
     const revealStatus = document.getElementById("revealStatus");
 
     const loadingOverlay = document.getElementById("loadingOverlay");
+    const snowfallContainer = document.getElementById("snowfall");
 
     let currentRole = null;
     let currentLoginPlayerIndex = null;
+
+    // Rein dekorativer Schneefall im Hintergrund - laeuft unabhaengig vom
+    // Firestore-Ladezustand und respektiert prefers-reduced-motion per CSS.
+    function initSnowfall() {
+      if (!snowfallContainer) return;
+      const flakeCount = window.innerWidth < 700 ? 12 : 22;
+      const glyphs = ["❄", "❅", "❆"];
+      const fragment = document.createDocumentFragment();
+      for (let i = 0; i < flakeCount; i++) {
+        const flake = document.createElement("span");
+        flake.className = "snowflake";
+        flake.textContent = glyphs[i % glyphs.length];
+        flake.style.left = Math.random() * 100 + "%";
+        flake.style.fontSize = 10 + Math.random() * 14 + "px";
+        flake.style.opacity = String(0.3 + Math.random() * 0.5);
+        flake.style.setProperty("--drift", (Math.random() * 60 - 30) + "px");
+        flake.style.animationDuration = 10 + Math.random() * 14 + "s";
+        flake.style.animationDelay = -(Math.random() * 20) + "s";
+        fragment.appendChild(flake);
+      }
+      snowfallContainer.appendChild(fragment);
+    }
+
+    initSnowfall();
 
     function switchTab(sectionId) {
       sections.forEach((sec) => {
@@ -1647,7 +1829,11 @@
         const header = document.createElement("div");
         header.className = "card-header";
         const title = document.createElement("div");
-        title.textContent = "Tag " + String(day).padStart(2, "0");
+        const dayBadge = document.createElement("span");
+        dayBadge.className = "day-badge";
+        dayBadge.textContent = String(day).padStart(2, "0");
+        title.appendChild(dayBadge);
+        title.appendChild(document.createTextNode("Tag " + String(day).padStart(2, "0")));
         const pill = document.createElement("div");
         pill.className = "pill";
         pill.textContent = ownerName + " ist dran";
