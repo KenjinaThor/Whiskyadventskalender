@@ -465,6 +465,11 @@
       margin-top: 8px;
     }
 
+    /* Nur ein gemeinsamer Whisky pro Tag - Formular nicht ueber die volle Breite ziehen */
+    .whisky-day-grid.single {
+      grid-template-columns: minmax(0, 280px);
+    }
+
     .whisky-subform {
       border: 1px solid #1f2937;
       border-radius: 10px;
@@ -807,8 +812,9 @@
 
         <div class="hint">
           Die Namen erscheinen im Login, beim Whisky erfassen und in der Auswertung. Mit ↑/↓ verschiebst du die
-          Reihenfolge, mit "Entfernen" löschst du eine Person komplett (inklusive ihrer Whisky-Einträge, Tipps,
-          Nieten und Freigabe). Die Tage werden reihum anhand der Anzahl und Reihenfolge der Teilnehmer eingeteilt
+          Reihenfolge, mit "Entfernen" löschst du eine Person komplett (inklusive ihres Kalenders mit Tipps, ihrer
+          Nieten und Freigabe – bereits erfasste Tages-Whiskys bleiben erhalten). Die Tage werden reihum anhand
+          der Anzahl und Reihenfolge der Teilnehmer eingeteilt
           (Tag 1 → erste Person, Tag 2 → zweite Person, ..., dann wieder von vorn). Achtung: Hinzufügen, Verschieben
           oder Entfernen ändert diese Tageszuteilung für den ganzen Kalender – am besten also erledigen, bevor
           Whiskys erfasst werden.
@@ -964,10 +970,11 @@
     <section id="whiskies" class="section">
       <h2>Whisky erfassen</h2>
       <div class="hint" style="margin-bottom: 6px;">
-        An jedem Tag befüllt eine Person die Whiskys für sich und alle anderen Teilnehmer – jeweils mit Name,
-        Edition, Alter und Alkoholgehalt (Vol.-%). Diese Angaben sind direkt die Lösung für diesen Tag, ein
-        separater Zwischenschritt entfällt. Beim Tippen im Namensfeld erscheinen automatisch Vorschläge aus einer
-        hinterlegten Whisky-Datenbank – bei Auswahl werden Edition/Alter/Alkoholgehalt wo bekannt mit ausgefüllt.
+        Jeder Tag hat genau einen gemeinsamen Whisky für alle Teilnehmer. An deinen Tagen (reihum nach Anzahl
+        Teilnehmer) trägst du ihn mit Name, Edition, Alter und Alkoholgehalt (Vol.-%) ein – diese Angabe ist direkt
+        die Lösung für diesen Tag, ein separater Zwischenschritt entfällt. Beim Tippen im Namensfeld erscheinen
+        automatisch Vorschläge aus einer hinterlegten Whisky-Datenbank – bei Auswahl werden Edition/Alter/
+        Alkoholgehalt wo bekannt mit ausgefüllt.
       </div>
       <div id="nietenContainer"></div>
       <div id="whiskyDaysContainer"></div>
@@ -1119,25 +1126,25 @@
 
     // playerCount ist die Anzahl Personen NACH dem Normalisieren von raw.players -
     // solutions/decoys/approvals/pins werden immer auf genau diese Größe gebracht.
-    function normalizeSolutions(raw, playerCount) {
+    // Ein Tag hat genau EINEN gemeinsamen Whisky (Loesung fuer alle Kalender).
+    // Aeltere Formate werden beim Laden automatisch migriert:
+    // - ganz alt: ein reiner String
+    // - Zwischenformat: pro Tag ein Objekt, keyed nach Personen-Index -
+    //   davon wird der erste belegte Eintrag als gemeinsamer Whisky uebernommen.
+    function normalizeSolutions(raw) {
       const solutions = {};
       if (!raw || typeof raw !== "object") return solutions;
       Object.keys(raw).forEach((day) => {
         const value = raw[day];
         if (typeof value === "string") {
-          // Altes Format: eine gemeinsame Lösung für alle Personen
-          const entry = normalizeWhiskyEntry(value);
-          const dayEntry = {};
-          for (let p = 0; p < playerCount; p++) dayEntry[p] = entry;
-          solutions[day] = dayEntry;
+          solutions[day] = normalizeWhiskyEntry(value);
         } else if (value && typeof value === "object") {
-          const dayEntry = {};
-          for (let p = 0; p < playerCount; p++) {
-            if (value[p] !== undefined) {
-              dayEntry[p] = normalizeWhiskyEntry(value[p]);
-            }
+          if (typeof value.name === "string") {
+            solutions[day] = normalizeWhiskyEntry(value);
+          } else {
+            const firstKey = Object.keys(value).find((k) => value[k] && value[k].name);
+            solutions[day] = firstKey ? normalizeWhiskyEntry(value[firstKey]) : emptyWhiskyEntry();
           }
-          solutions[day] = dayEntry;
         }
       });
       return solutions;
@@ -1168,7 +1175,7 @@
       }
       const count = base.players.length;
 
-      base.solutions = normalizeSolutions(raw && raw.solutions, count);
+      base.solutions = normalizeSolutions(raw && raw.solutions);
 
       const rawCalendars = raw && Array.isArray(raw.calendars) ? raw.calendars : [];
       base.calendars = Array.from({ length: count }, (_, idx) => {
@@ -1219,10 +1226,8 @@
       return (day - 1) % count;
     }
 
-    function getSolutionEntry(day, playerIdx) {
-      const dayEntry = appState.solutions[day];
-      if (dayEntry && dayEntry[playerIdx]) return dayEntry[playerIdx];
-      return emptyWhiskyEntry();
+    function getSolutionEntry(day) {
+      return appState.solutions[day] || emptyWhiskyEntry();
     }
 
     function formatWhiskyEntry(entry) {
@@ -1235,17 +1240,15 @@
     }
 
     // Kandidaten-Namen für den Tipp an einem Tag: alle Whiskynamen, die die für
-    // diesen Tag zuständige Person über den ganzen Kalender hinweg als Lösung
-    // erfasst hat (für sich selbst und die beiden anderen Teilnehmer).
+    // diesen Tag zuständige Person über den ganzen Kalender hinweg als (gemeinsame)
+    // Lösung erfasst hat.
     function getCandidateNamesForDay(day) {
       const ownerIdx = getOwnerIndexForDay(day);
       const names = new Set();
       for (let d = 1; d <= 24; d++) {
         if (getOwnerIndexForDay(d) !== ownerIdx) continue;
-        for (let p = 0; p < appState.players.length; p++) {
-          const entry = getSolutionEntry(d, p);
-          if (entry.name) names.add(entry.name);
-        }
+        const entry = getSolutionEntry(d);
+        if (entry.name) names.add(entry.name);
       }
       // Nieten: erfasste, aber nie echte Whiskys derselben zuständigen Person -
       // zusätzliche, bewusst verwirrende Auswahlmöglichkeiten.
@@ -1475,14 +1478,15 @@
       const other = idx + direction;
       if (other < 0 || other >= appState.players.length) return;
 
+      // appState.solutions wird NICHT mehr reindiziert: seit dem gemeinsamen
+      // Tages-Whisky ist ein Loesungseintrag ein flaches { name, edition, age,
+      // volume }-Objekt, keiner Person zugeordnet - er bleibt unveraendert
+      // gueltig, unabhaengig davon, wer ihn einst erfasst hat.
       swapArrayIndex(appState.players, idx, other);
       swapArrayIndex(appState.calendars, idx, other);
       swapArrayIndex(appState.pins.players, idx, other);
       swapKeyedIndex(appState.decoys, idx, other);
       swapKeyedIndex(appState.approvals, idx, other);
-      Object.keys(appState.solutions).forEach((day) => {
-        swapKeyedIndex(appState.solutions[day], idx, other);
-      });
 
       await saveStateToFirestore();
       renderAllPlayerDependentUI();
@@ -1492,8 +1496,9 @@
       if (appState.players.length <= 1) return;
       const name = appState.players[idx] || "Person " + (idx + 1);
       const confirmed = window.confirm(
-        "Wirklich \"" + name + "\" entfernen? Alle ihre Whisky-Einträge, Tipps, Nieten und die Freigabe gehen " +
-        "dabei unwiderruflich verloren, und die Tageszuteilung für den gesamten Kalender wird neu berechnet."
+        "Wirklich \"" + name + "\" entfernen? Ihr Kalender (Tipps), ihre Nieten und ihre Freigabe gehen dabei " +
+        "unwiderruflich verloren, und die Tageszuteilung für den gesamten Kalender wird neu berechnet. Bereits " +
+        "erfasste Tages-Whiskys bleiben erhalten."
       );
       if (!confirmed) return;
 
@@ -1502,9 +1507,6 @@
       appState.pins.players.splice(idx, 1);
       appState.decoys = removeKeyedIndex(appState.decoys, idx);
       appState.approvals = removeKeyedIndex(appState.approvals, idx);
-      Object.keys(appState.solutions).forEach((day) => {
-        appState.solutions[day] = removeKeyedIndex(appState.solutions[day], idx);
-      });
 
       await saveStateToFirestore();
       renderAllPlayerDependentUI();
@@ -1709,11 +1711,14 @@
       });
     }
 
-    function buildWhiskySubform(day, playerIdx) {
-      const entry = getSolutionEntry(day, playerIdx);
-      const playerName = appState.players[playerIdx] || "Person " + (playerIdx + 1);
-      const isYou = currentRole && currentRole.type === "player" && currentRole.index === playerIdx;
-      return buildWhiskyFieldGroup(playerName + (isYou ? " (du)" : ""), entry, isYou);
+    // Jeder Tag hat genau einen gemeinsamen Whisky - erfasst von der fuer den Tag
+    // zustaendigen Person und beschriftet mit ihrem Namen.
+    function buildDaySubform(day) {
+      const entry = getSolutionEntry(day);
+      const ownerIdx = getOwnerIndexForDay(day);
+      const ownerName = appState.players[ownerIdx] || "Person " + (ownerIdx + 1);
+      const isYou = currentRole && currentRole.type === "player" && currentRole.index === ownerIdx;
+      return buildWhiskyFieldGroup(ownerName + (isYou ? " (du)" : ""), entry, isYou);
     }
 
     function buildDecoySubform(ownerIdx, slotIdx) {
@@ -1842,13 +1847,10 @@
         card.appendChild(header);
 
         const grid = document.createElement("div");
-        grid.className = "whisky-day-grid";
+        grid.className = "whisky-day-grid single";
 
-        const fieldRefs = appState.players.map((_, playerIdx) => {
-          const built = buildWhiskySubform(day, playerIdx);
-          grid.appendChild(built.sub);
-          return built;
-        });
+        const built = buildDaySubform(day);
+        grid.appendChild(built.sub);
 
         card.appendChild(grid);
 
@@ -1862,16 +1864,12 @@
         toast.style.display = "none";
 
         saveBtn.addEventListener("click", () => withButtonGuard(saveBtn, async () => {
-          const dayEntry = {};
-          fieldRefs.forEach((refs, playerIdx) => {
-            dayEntry[playerIdx] = {
-              name: refs.nameInput.value.trim(),
-              edition: refs.editionInput.value.trim(),
-              age: refs.ageInput.value.trim(),
-              volume: refs.volumeInput.value.trim()
-            };
-          });
-          appState.solutions[day] = dayEntry;
+          appState.solutions[day] = {
+            name: built.nameInput.value.trim(),
+            edition: built.editionInput.value.trim(),
+            age: built.ageInput.value.trim(),
+            volume: built.volumeInput.value.trim()
+          };
           await saveStateToFirestore();
 
           toast.textContent = "Tag " + day + " gespeichert.";
@@ -2000,7 +1998,7 @@
       const fragment = document.createDocumentFragment();
 
       for (let day = 1; day <= 24; day++) {
-        const solutionEntry = getSolutionEntry(day, idx);
+        const solutionEntry = getSolutionEntry(day);
         const solutionName = solutionEntry.name || "";
         const guess = (cal.guesses && cal.guesses[day]) || "";
         const rating = (cal.ratings && cal.ratings[day]) || "";
@@ -2320,7 +2318,7 @@
 
       await saveStateToFirestore();
 
-      const solutionName = getSolutionEntry(day, idx).name || "";
+      const solutionName = getSolutionEntry(day).name || "";
       let msg = "Tipp für Tag " + day + " gespeichert.";
       let cls = "toast toast-success";
 
