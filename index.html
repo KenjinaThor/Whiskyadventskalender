@@ -1248,23 +1248,25 @@
       return details.length ? entry.name + " (" + details.join(", ") + ")" : entry.name;
     }
 
-    // Kandidaten-Namen für den Tipp an einem Tag: alle Whiskynamen, die die für
-    // diesen Tag zuständige Person über den ganzen Kalender hinweg als (gemeinsame)
-    // Lösung erfasst hat.
-    function getCandidateNamesForDay(day) {
+    // Kandidaten-Einträge für den Tipp an einem Tag: alle Whiskys (inkl. Details), die
+    // die für diesen Tag zuständige Person über den ganzen Kalender hinweg als
+    // (gemeinsame) Lösung erfasst hat.
+    function getCandidateEntriesForDay(day) {
       const ownerIdx = getOwnerIndexForDay(day);
-      const names = new Set();
+      const byName = new Map();
       for (let d = 1; d <= 24; d++) {
         if (getOwnerIndexForDay(d) !== ownerIdx) continue;
         const entry = getSolutionEntry(d);
-        if (entry.name) names.add(entry.name);
+        if (entry.name && !byName.has(entry.name)) byName.set(entry.name, entry);
       }
       // Nieten: erfasste, aber nie echte Whiskys derselben zuständigen Person -
       // zusätzliche, bewusst verwirrende Auswahlmöglichkeiten.
       (appState.decoys[ownerIdx] || []).forEach((entry) => {
-        if (entry && entry.name) names.add(entry.name);
+        if (entry && entry.name && !byName.has(entry.name)) byName.set(entry.name, entry);
       });
-      return Array.from(names).sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+      return Array.from(byName.values()).sort((a, b) =>
+        a.name.localeCompare(b.name, "de", { sensitivity: "base" })
+      );
     }
 
     // UI-Referenzen
@@ -2049,9 +2051,11 @@
       }
     }
 
-    // Dropdown für Tippabgabe: Whiskys nach Tag filtern und bereits verwendete markieren
+    // Dropdown für Tippabgabe: Whiskys (mit allen Details) nach Tag filtern und
+    // bereits verwendete markieren. Gespeichert/verglichen wird weiterhin nur der
+    // Name, angezeigt werden aber Edition, Alter und Vol.-% zur besseren Unterscheidung.
     function populateWhiskySelect(selectElement, currentValue, day, usedSet) {
-      const list = getCandidateNamesForDay(day);
+      const list = getCandidateEntriesForDay(day);
       selectElement.innerHTML = "";
 
       const emptyOpt = document.createElement("option");
@@ -2061,15 +2065,16 @@
         : "-- Whisky wählen --";
       selectElement.appendChild(emptyOpt);
 
-      list.forEach((name) => {
+      list.forEach((entry) => {
         const opt = document.createElement("option");
-        opt.value = name;
+        opt.value = entry.name;
+        const label = formatWhiskyEntry(entry);
 
-        if (usedSet && usedSet.has(name)) {
+        if (usedSet && usedSet.has(entry.name)) {
           opt.classList.add("used-option");
-          opt.textContent = name + " (bereits ausgewählt)";
+          opt.textContent = label + " (bereits ausgewählt)";
         } else {
-          opt.textContent = name;
+          opt.textContent = label;
         }
 
         selectElement.appendChild(opt);
