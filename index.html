@@ -1975,14 +1975,26 @@
         toast.style.display = "none";
 
         async function saveDayEntry() {
+          const name = built.nameInput.value.trim();
           appState.solutions[day] = {
-            name: built.nameInput.value.trim(),
+            name,
             edition: built.editionInput.value.trim(),
             age: built.ageInput.value.trim(),
             volume: built.volumeInput.value.trim()
           };
+
+          // Der/die Zuständige kennt den eigenen Tag bereits - der Tipp dafür wird
+          // automatisch nur im eigenen Kalender eingetragen, nie bei anderen Personen.
+          ensureCalendar(ownerIdx);
+          if (name) {
+            appState.calendars[ownerIdx].guesses[day] = name;
+          } else {
+            delete appState.calendars[ownerIdx].guesses[day];
+          }
+
           await saveStateToFirestore();
           renderGuessWhiskySelect();
+          renderGuessOverview();
           renderResults();
         }
 
@@ -2011,6 +2023,11 @@
           autoSave.cancelPending();
 
           delete appState.solutions[day];
+
+          // Eigenen automatisch gesetzten Tipp für diesen Tag ebenfalls entfernen.
+          ensureCalendar(ownerIdx);
+          delete appState.calendars[ownerIdx].guesses[day];
+
           await saveStateToFirestore();
 
           built.nameInput.value = "";
@@ -2027,6 +2044,7 @@
           }, 2000);
 
           renderGuessWhiskySelect();
+          renderGuessOverview();
           renderResults();
         }));
 
