@@ -1253,19 +1253,28 @@
     // (gemeinsame) Lösung erfasst hat.
     function getCandidateEntriesForDay(day) {
       const ownerIdx = getOwnerIndexForDay(day);
-      const byName = new Map();
+      const byKey = new Map();
+
+      // Dedupliziert wird anhand aller Details, nicht nur des Namens: zwei
+      // Flaschen derselben Marke mit unterschiedlicher Edition/Alter/Vol.-%
+      // sind unterschiedliche Kandidaten und sollen beide sichtbar bleiben.
+      function addEntry(entry) {
+        if (!entry || !entry.name) return;
+        const key = [entry.name, entry.edition || "", entry.age || "", entry.volume || ""].join("|");
+        if (!byKey.has(key)) byKey.set(key, entry);
+      }
+
       for (let d = 1; d <= 24; d++) {
         if (getOwnerIndexForDay(d) !== ownerIdx) continue;
-        const entry = getSolutionEntry(d);
-        if (entry.name && !byName.has(entry.name)) byName.set(entry.name, entry);
+        addEntry(getSolutionEntry(d));
       }
       // Nieten: erfasste, aber nie echte Whiskys derselben zuständigen Person -
       // zusätzliche, bewusst verwirrende Auswahlmöglichkeiten.
-      (appState.decoys[ownerIdx] || []).forEach((entry) => {
-        if (entry && entry.name && !byName.has(entry.name)) byName.set(entry.name, entry);
-      });
-      return Array.from(byName.values()).sort((a, b) =>
-        a.name.localeCompare(b.name, "de", { sensitivity: "base" })
+      (appState.decoys[ownerIdx] || []).forEach(addEntry);
+
+      return Array.from(byKey.values()).sort((a, b) =>
+        a.name.localeCompare(b.name, "de", { sensitivity: "base" }) ||
+        formatWhiskyEntry(a).localeCompare(formatWhiskyEntry(b), "de", { sensitivity: "base" })
       );
     }
 
