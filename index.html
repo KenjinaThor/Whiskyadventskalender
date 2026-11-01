@@ -696,9 +696,19 @@
           <button id="adminLoginBtn" class="btn btn-primary" style="margin-top: 8px;">
             Als Admin anmelden
           </button>
+
+          <div id="adminFaceIdRow" class="hidden" style="margin-top: 8px;">
+            <button id="adminFaceIdLoginBtn" class="btn btn-outline btn-small">
+              Mit Face ID anmelden
+            </button>
+          </div>
+          <button id="adminFaceIdSetupBtn" class="btn btn-outline btn-small hidden" style="margin-top: 8px;">
+            Face ID für dieses Gerät einrichten
+          </button>
         </div>
 
         <div id="adminLoginToast" class="toast toast-error" style="display:none;"></div>
+        <div id="adminFaceIdToast" class="toast toast-error" style="display:none;"></div>
       </div>
 
       <div class="login-section" style="margin-top: 14px;">
@@ -726,15 +736,27 @@
             <button id="playerLoginBtn" class="btn btn-primary" style="margin-top: 8px;">
               Anmelden
             </button>
+
+            <div id="playerFaceIdRow" class="hidden" style="margin-top: 8px;">
+              <button id="playerFaceIdLoginBtn" class="btn btn-outline btn-small">
+                Mit Face ID anmelden
+              </button>
+            </div>
+            <button id="playerFaceIdSetupBtn" class="btn btn-outline btn-small hidden" style="margin-top: 8px;">
+              Face ID für dieses Gerät einrichten
+            </button>
           </div>
 
           <div id="playerLoginToast" class="toast toast-error" style="display:none;"></div>
+          <div id="playerFaceIdToast" class="toast toast-error" style="display:none;"></div>
         </div>
       </div>
 
       <div class="login-footer">
         Hinweis: Admin kann Namen, alle erfassten Whiskys und die Auswertung sehen. Teilnehmer erfassen die Whiskys
-        für ihre eigenen Tage und geben ihre Tipps ab.
+        für ihre eigenen Tage und geben ihre Tipps ab. Face ID/Touch ID ist eine geräteabhängige Abkürzung für den
+        Code-Login: nach einmaliger Einrichtung mit dem korrekten Code kannst du dich auf genau diesem Gerät
+        künftig per Face ID/Touch ID anmelden, ohne den Code erneut einzutippen.
       </div>
     </div>
   </div>
@@ -1321,6 +1343,10 @@
     const adminPinInput = document.getElementById("adminPinInput");
     const adminLoginBtn = document.getElementById("adminLoginBtn");
     const adminLoginToast = document.getElementById("adminLoginToast");
+    const adminFaceIdRow = document.getElementById("adminFaceIdRow");
+    const adminFaceIdLoginBtn = document.getElementById("adminFaceIdLoginBtn");
+    const adminFaceIdSetupBtn = document.getElementById("adminFaceIdSetupBtn");
+    const adminFaceIdToast = document.getElementById("adminFaceIdToast");
 
     const loginPlayerButtonsContainer = document.getElementById("loginPlayerButtonsContainer");
 
@@ -1335,6 +1361,10 @@
     const playerPinInput = document.getElementById("playerPinInput");
     const playerLoginBtn = document.getElementById("playerLoginBtn");
     const playerLoginToast = document.getElementById("playerLoginToast");
+    const playerFaceIdRow = document.getElementById("playerFaceIdRow");
+    const playerFaceIdLoginBtn = document.getElementById("playerFaceIdLoginBtn");
+    const playerFaceIdSetupBtn = document.getElementById("playerFaceIdSetupBtn");
+    const playerFaceIdToast = document.getElementById("playerFaceIdToast");
 
     const currentRoleBadge = document.getElementById("currentRoleBadge");
     const currentRoleName = document.getElementById("currentRoleName");
@@ -1410,6 +1440,94 @@
       } finally {
         btn.disabled = false;
       }
+    }
+
+    // Face ID / Touch ID - geräteseitiger Komfort-Login per WebAuthn.
+    // Diese App hat keinen eigenen Server, der eine WebAuthn-Signatur prüfen
+    // könnte. Die Credential-ID wird deshalb nur lokal in diesem Browser
+    // gespeichert; ein erfolgreicher Abruf (navigator.credentials.get) zeigt
+    // nur "dieselbe biometrische Freigabe wie bei der Einrichtung auf diesem
+    // Gerät" und ersetzt damit lediglich das erneute Eintippen des Codes auf
+    // genau diesem Gerät - keine serverseitige Prüfung.
+    function isWebAuthnSupported() {
+      return !!(window.PublicKeyCredential && navigator.credentials);
+    }
+
+    let platformAuthAvailable = false;
+    async function detectPlatformAuthenticator() {
+      try {
+        if (isWebAuthnSupported() && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
+          platformAuthAvailable = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+        }
+      } catch {
+        platformAuthAvailable = false;
+      }
+      updateLoginView();
+    }
+
+    function faceIdStorageKey(roleKey) {
+      return "faceIdCredential_" + roleKey;
+    }
+
+    function getStoredFaceIdCredential(roleKey) {
+      try {
+        return localStorage.getItem(faceIdStorageKey(roleKey));
+      } catch {
+        return null;
+      }
+    }
+
+    function bufferToBase64url(buffer) {
+      let str = "";
+      new Uint8Array(buffer).forEach((b) => {
+        str += String.fromCharCode(b);
+      });
+      return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    }
+
+    function base64urlToBuffer(base64url) {
+      const padLength = (4 - (base64url.length % 4)) % 4;
+      const padded = (base64url + "=".repeat(padLength)).replace(/-/g, "+").replace(/_/g, "/");
+      const str = atob(padded);
+      const bytes = new Uint8Array(str.length);
+      for (let i = 0; i < str.length; i++) bytes[i] = str.charCodeAt(i);
+      return bytes.buffer;
+    }
+
+    async function registerFaceId(roleKey, displayName) {
+      const credential = await navigator.credentials.create({
+        publicKey: {
+          challenge: crypto.getRandomValues(new Uint8Array(32)),
+          rp: { name: "Whisky Adventskalender" },
+          user: {
+            id: crypto.getRandomValues(new Uint8Array(16)),
+            name: displayName,
+            displayName
+          },
+          pubKeyCredParams: [
+            { type: "public-key", alg: -7 },
+            { type: "public-key", alg: -257 }
+          ],
+          authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+          timeout: 60000,
+          attestation: "none"
+        }
+      });
+      localStorage.setItem(faceIdStorageKey(roleKey), bufferToBase64url(credential.rawId));
+    }
+
+    async function verifyFaceId(roleKey) {
+      const storedId = getStoredFaceIdCredential(roleKey);
+      if (!storedId) return false;
+      await navigator.credentials.get({
+        publicKey: {
+          challenge: crypto.getRandomValues(new Uint8Array(32)),
+          allowCredentials: [{ id: base64urlToBuffer(storedId), type: "public-key" }],
+          userVerification: "required",
+          timeout: 60000
+        }
+      });
+      return true;
     }
 
     // Autospeicherung fuer Whisky-Formulare: speichert automatisch kurz nachdem
@@ -2325,6 +2443,10 @@
     }
 
     function updateLoginView() {
+      adminFaceIdSetupBtn.classList.toggle("hidden", !platformAuthAvailable);
+      adminFaceIdRow.classList.toggle("hidden", !(platformAuthAvailable && getStoredFaceIdCredential("admin")));
+      adminFaceIdToast.style.display = "none";
+
       if (currentLoginPlayerIndex === null) {
         playerLoginDetail.style.display = "none";
       } else {
@@ -2345,6 +2467,13 @@
           playerFirstLogin.classList.remove("hidden");
           playerLoginExisting.classList.add("hidden");
         }
+
+        playerFaceIdSetupBtn.classList.toggle("hidden", !platformAuthAvailable);
+        playerFaceIdRow.classList.toggle(
+          "hidden",
+          !(platformAuthAvailable && getStoredFaceIdCredential("player_" + idx))
+        );
+        playerFaceIdToast.style.display = "none";
 
         playerLoginToast.style.display = "none";
         playerNewPinInput.value = "";
@@ -2636,6 +2765,79 @@
       }
     });
 
+    adminFaceIdSetupBtn.addEventListener("click", () => withButtonGuard(adminFaceIdSetupBtn, async () => {
+      const pin = adminPinInput.value.trim();
+      if (pin !== ADMIN_PASSWORD) {
+        adminFaceIdToast.textContent = "Bitte zuerst den korrekten Admin-Code eingeben.";
+        adminFaceIdToast.style.display = "block";
+        return;
+      }
+      try {
+        await registerFaceId("admin", "Admin");
+        adminFaceIdToast.style.display = "none";
+        adminFaceIdRow.classList.remove("hidden");
+      } catch (err) {
+        adminFaceIdToast.textContent = "Face ID konnte nicht eingerichtet werden.";
+        adminFaceIdToast.style.display = "block";
+      }
+    }));
+
+    adminFaceIdLoginBtn.addEventListener("click", () => withButtonGuard(adminFaceIdLoginBtn, async () => {
+      try {
+        const ok = await verifyFaceId("admin");
+        if (ok) {
+          adminPinInput.value = "";
+          adminLoginToast.style.display = "none";
+          adminFaceIdToast.style.display = "none";
+          currentRole = { type: "admin" };
+          updateRoleUI();
+        }
+      } catch (err) {
+        adminFaceIdToast.textContent = "Face ID fehlgeschlagen.";
+        adminFaceIdToast.style.display = "block";
+      }
+    }));
+
+    playerFaceIdSetupBtn.addEventListener("click", () => withButtonGuard(playerFaceIdSetupBtn, async () => {
+      if (currentLoginPlayerIndex === null) return;
+      const idx = currentLoginPlayerIndex;
+      const expected = appState.pins.players[idx];
+      const pin = playerPinInput.value.trim();
+      if (!expected || pin !== expected) {
+        playerFaceIdToast.textContent = "Bitte zuerst den korrekten Code eingeben.";
+        playerFaceIdToast.style.display = "block";
+        return;
+      }
+      try {
+        const name = appState.players[idx] || "Teilnehmer " + (idx + 1);
+        await registerFaceId("player_" + idx, name);
+        playerFaceIdToast.style.display = "none";
+        playerFaceIdRow.classList.remove("hidden");
+      } catch (err) {
+        playerFaceIdToast.textContent = "Face ID konnte nicht eingerichtet werden.";
+        playerFaceIdToast.style.display = "block";
+      }
+    }));
+
+    playerFaceIdLoginBtn.addEventListener("click", () => withButtonGuard(playerFaceIdLoginBtn, async () => {
+      if (currentLoginPlayerIndex === null) return;
+      const idx = currentLoginPlayerIndex;
+      try {
+        const ok = await verifyFaceId("player_" + idx);
+        if (ok) {
+          currentLoginPlayerIndex = null;
+          playerPinInput.value = "";
+          playerLoginToast.style.display = "none";
+          playerFaceIdToast.style.display = "none";
+          currentRole = { type: "player", index: idx };
+          updateRoleUI();
+        }
+      } catch (err) {
+        playerFaceIdToast.textContent = "Face ID fehlgeschlagen.";
+        playerFaceIdToast.style.display = "block";
+      }
+    }));
+
     logoutBtn.addEventListener("click", () => {
       currentRole = null;
       currentLoginPlayerIndex = null;
@@ -2708,6 +2910,7 @@
       loadingOverlay.style.display = "none";
       loginOverlay.classList.remove("hidden");
       updateLoginView();
+      detectPlatformAuthenticator();
     }
 
     init();
